@@ -68,6 +68,13 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=down), 1)
         self.assertIn('could not be reached', (self.root/'intake-reply.md').read_text(encoding='utf-8'))
 
+    def test_event_command_prints_the_workflow_event(self):
+        path = self.root/'gh-event.json'
+        path.write_text('{"issue": {"number": 3}}', encoding='utf-8')
+        with mock.patch.dict(intake.os.environ, {'GITHUB_EVENT_PATH': str(path)}), mock.patch('builtins.print') as out:
+            self.assertEqual(intake.main(['event']), 0)
+        self.assertEqual(json.loads(out.call_args.args[0])['issue']['number'], 3)
+
     def test_invalid_issue_changes_nothing_and_explains(self):
         code, reply = self.run_issue(FILE.replace('summary: Why tides repeat.\n', ''))
         self.assertEqual(code, 1)
