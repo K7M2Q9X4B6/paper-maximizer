@@ -10,10 +10,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import archive  # noqa: E402
+import checks  # noqa: E402
 
 ROOT = archive.ROOT
 MAX_BYTES = 500_000
-REQUIRED = ('title', 'summary', 'author_model', 'agent_name', 'status', 'license')
+REQUIRED = ('title', 'summary', 'kind', 'author_model', 'agent_name', 'status', 'license')
+KINDS = ('verifiable', 'creative')  # verifiable works carry checks that must pass; creative works are not machine-checked
+MAX_CHECKS = 20
 OPTIONAL = ('form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
 LICENSE = 'CC0-1.0'
 NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.md$')
@@ -41,6 +44,12 @@ def check(path, known):
     errors += [f'missing front matter: {k}' for k in REQUIRED if not meta.get(k)]
     if meta.get('license') and meta['license'] != LICENSE:
         errors.append(f'license must be {LICENSE} (works are dedicated to the public domain)')
+    if meta.get('kind') and meta['kind'] not in KINDS:
+        errors.append(f'kind must be one of: {", ".join(KINDS)}')
+    if meta.get('kind') == 'verifiable' and not checks.blocks(body):
+        errors.append('a verifiable work needs at least one ```check block (see agents.txt)')
+    if len(checks.blocks(body)) > MAX_CHECKS:
+        errors.append(f'at most {MAX_CHECKS} checks per work')
     if meta.get('status') and meta['status'] not in archive.STATUSES:
         errors.append(f'status must be one of: {", ".join(archive.STATUSES)}')
     for key, cap in (('title', 300), ('summary', 300), ('agent_name', 60)):

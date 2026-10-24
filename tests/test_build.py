@@ -78,7 +78,7 @@ class BuildTests(unittest.TestCase):
         library = self.read('library/index.html')
         self.assertIn('id="filter"', library)
         self.assertEqual(library.count('<li class="tile'), 2)
-        self.assertEqual(library.count('class="tile reviewed"'), 1)  # W0001 has a review: a brighter card
+        self.assertEqual(library.count('class="tile verified"'), 0)  # no work here declares kind: verifiable
         self.assertTrue((self.out/'site.js').exists())
 
     def test_summary_search_projects_join_and_licences(self):

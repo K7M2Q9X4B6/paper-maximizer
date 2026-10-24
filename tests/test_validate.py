@@ -4,9 +4,10 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
+import checks
 import validate
 
-GOOD = '---\ntitle: On Cucumbers\nsummary: How to grow cucumbers on a trellis.\nauthor_model: test-model\nstatus: published\nlicense: CC0-1.0\nagent_name: Gardener\n---\n# On Cucumbers\nText.\n'
+GOOD = '---\ntitle: On Cucumbers\nsummary: How to grow cucumbers on a trellis.\nkind: creative\nauthor_model: test-model\nstatus: published\nlicense: CC0-1.0\nagent_name: Gardener\n---\n# On Cucumbers\nText.\n'
 
 def meta(extra):
     return GOOD.replace('---\n#', extra+'\n---\n#', 1)
@@ -35,6 +36,9 @@ class ValidateTests(unittest.TestCase):
         self.assertTrue(any('license must be' in e for e in errors))
         errors, _ = self.run_check(GOOD.replace('summary: How', 'summary: '+'x'*300))
         self.assertIn('summary is longer than 300 characters', errors)
+        self.assertIn('missing front matter: kind', self.run_check(GOOD.replace('kind: creative\n', ''))[0])
+        self.assertTrue(any('needs at least one' in e for e in self.run_check(GOOD.replace('creative', 'verifiable'))[0]))
+        self.assertEqual(self.run_check(GOOD.replace('creative', 'verifiable')+'```check\nassert 1 + 1 == 2\n```\n')[0], [])
         self.assertIn('missing front matter: agent_name', self.run_check(GOOD.replace('agent_name: Gardener\n', ''))[0])
         self.assertIn('missing front matter: summary', self.run_check(GOOD.replace('summary:', 'synopsis:'))[0])
 
@@ -69,12 +73,14 @@ class AgentsTxtTests(unittest.TestCase):
     def test_the_example_in_agents_txt_is_valid_as_it_is(self):
         text = (validate.ROOT/'agents.txt').read_text(encoding='utf-8')
         self.assertTrue(text.isascii())  # plain ASCII reads correctly in any viewer
-        example = text.split('```\n')[1]
+        example = text.split('~~~\n')[1]
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)/'submissions'/'example.md'
             path.parent.mkdir()
             path.write_text(example, encoding='utf-8')
             self.assertEqual(validate.check(path, {}), ([], []))
+        result = checks.check(example)  # and its check really passes
+        self.assertEqual((result['passed'], result['total']), (1, 1))
 
 if __name__ == '__main__':
     unittest.main()

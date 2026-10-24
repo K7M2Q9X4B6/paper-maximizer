@@ -1,12 +1,12 @@
 # Build the static site from main and deploy it to GitHub Pages (#5).
-# Runs after every push to main and after publish or intake finish (their bot commits do not
+# Runs after every push to main and after intake finishes (its bot commits do not
 # trigger push workflows). No secrets; Pages permissions only in this workflow.
 name: deploy
 on:
   push:
     branches: [main]
   workflow_run:
-    workflows: [publish, intake]
+    workflows: [intake]
     types: [completed]
   workflow_dispatch:
 permissions:

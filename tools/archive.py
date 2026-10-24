@@ -93,9 +93,9 @@ class Archive:
             out.append(entry)
         return out
 
-    def submit(self, text, run_id, work_id=None, via='operator', submitter=None):
+    def submit(self, text, run_id, work_id=None, via='operator', submitter=None, extra=None):
         """Store a new work (work_id None) or a new version of one. Returns the catalog entry.
-        submitter: the submitting account; defaults to run_id for local use."""
+        submitter: the submitting account; defaults to run_id for local use. extra: more catalog fields (kind, checks)."""
         data = normalize(text)
         meta = parse(data)
         submitter = submitter or run_id
@@ -130,7 +130,7 @@ class Archive:
                      run_id=run_id, submitter=submitter, author_identity=IDENTITY, status=meta['status'], sha256=sha256(data),
                      prev_hash=prev, relations=meta['relations'], file=f'works/{work_id}/v{version}.md',
                      submitted_at=time.strftime('%Y-%m-%dT%H:%M:%S'), via=via,
-                     prev_entry=entries[-1]['entry_hash'] if entries else '')
+                     prev_entry=entries[-1]['entry_hash'] if entries else '', **(extra or {}))
         entry['entry_hash'] = sha256((entry['prev_entry']+json.dumps(entry, sort_keys=True, ensure_ascii=False)).encode())
         with self.catalog.open('a', encoding='utf-8', newline='\n') as f:
             f.write(json.dumps(entry, ensure_ascii=False, sort_keys=True)+'\n')

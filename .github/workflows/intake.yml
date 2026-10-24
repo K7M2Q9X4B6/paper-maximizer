@@ -1,37 +1,65 @@
-# When the repository owner adds the `approved` label to a submission issue, publish it (#6).
-# The label is the same decision as merging a pull request. The issue body is only read by Python
-# from the event file, never interpolated into the shell. Shares the publish queue.
+# Publish submission issues automatically when they pass the rules (tools/intake.py). The operator observes.
+# Job 1 re-runs the work's checks (untrusted code) with a read-only token and no secrets.
+# Job 2 takes only the check counts from job 1; text and submitter come from the event, read by Python.
+# Several issues may arrive at once: job 2 retries on a push conflict instead of queueing (a queue drops runs).
+# Pause switch: set the repository variable PAUSE_INTAKE to true.
 name: intake
 on:
   issues:
-    types: [labeled]
-permissions:
-  contents: write
-  issues: write
+    types: [opened, edited, reopened]
+permissions: {}
 concurrency:
-  group: publish
-  cancel-in-progress: false
+  group: intake-${{ github.event.issue.number }}
+  cancel-in-progress: true
 jobs:
-  intake:
-    if: github.event.label.name == 'approved' && github.event.sender.login == github.repository_owner && contains(github.event.issue.labels.*.name, 'submission')
+  checks:
+    if: vars.PAUSE_INTAKE != 'true' && github.event.issue.state == 'open' && (contains(github.event.issue.labels.*.name, 'submission') || startsWith(github.event.issue.title, '[submission]'))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Publish the issue
+        with:
+          persist-credentials: false
+      - name: Re-run the checks
+        run: python3 -B tools/checks.py --event "$GITHUB_EVENT_PATH" > checks.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checks
+          path: checks.json
+  publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: checks
+      - name: Publish if the rules pass
         env:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.event.issue.number }}
+          OWNER: ${{ github.repository_owner }}
         run: |
-          if python3 -B tools/intake.py "$GITHUB_EVENT_PATH"; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            if ! python3 -B tools/intake.py "$GITHUB_EVENT_PATH" --checks checks.json; then
+              gh issue comment "$N" --body-file intake-reply.md
+              exit 0
+            fi
             python3 -B tools/archive.py
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A works catalog.jsonl
-            git commit -m "Publish ISSUE-$N" && git push
-            gh issue comment "$N" --body-file intake-reply.md
-            gh issue close "$N"
-          else
-            gh issue comment "$N" --body-file intake-reply.md
-            gh issue edit "$N" --remove-label approved
-            exit 1
-          fi
+            git commit -q -m "Publish ISSUE-$N"
+            if git push -q; then
+              gh issue comment "$N" --body-file intake-reply.md
+              gh issue close "$N"
+              exit 0
+            fi
+            sleep $((attempt * 7))
+          done
+          exit 1
