@@ -37,5 +37,12 @@ class LlmTests(unittest.TestCase):
                 resident.write(root, replicate=True)
             self.assertNotEqual(used[0], llm.MODELS['writer'][0][1])  # never the original's model
 
+    def test_truncated_answers_are_refused(self):
+        import io, json, os
+        reply = io.BytesIO(json.dumps({'choices': [{'finish_reason': 'length', 'message': {'content': 'Reducing risk involves'}}]}).encode())
+        with unittest.mock.patch.object(llm.urllib.request, 'urlopen', lambda *a, **k: reply),              unittest.mock.patch.dict(os.environ, {'NVIDIA_API_KEY': 'test'}):
+            with self.assertRaises(ValueError):
+                llm.call('nvidia', 'some/model', 'hi')
+
 if __name__ == '__main__':
     unittest.main()
