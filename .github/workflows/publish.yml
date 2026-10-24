@@ -1,0 +1,34 @@
+# After a merge to main that adds submissions: assign W-numbers, hash, catalog, then commit.
+# Runs only on main, one at a time. Commits made with GITHUB_TOKEN do not trigger workflows again.
+name: publish
+on:
+  push:
+    branches: [main]
+    paths: ['submissions/**']
+permissions:
+  contents: write
+  pull-requests: read
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish merged submissions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          pr=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0] | "\(.number) \(.user.login)"' 2>/dev/null || true)
+          if [ -n "$pr" ] && [ "$pr" != "null null" ]; then run_id="PR-${pr%% *}"; submitter="${pr#* }"
+          else run_id="commit-${SHA:0:7}"; submitter="$ACTOR"; fi
+          python3 -B tools/publish.py --run-id "$run_id" --submitter "$submitter"
+          python3 -B tools/archive.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A works catalog.jsonl submissions
+          if ! git diff --cached --quiet; then git commit -m "Publish $run_id" && git push; fi

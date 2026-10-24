@@ -1,0 +1,355 @@
+"""Static site generator. Reads the catalog, works and docs; writes plain HTML to site/.
+
+Usage: python tools/build.py [--root DIR] [--out DIR]     preview: python -m http.server -d site
+Python standard library only. Every piece of text is HTML-escaped; works cannot inject markup or scripts.
+"""
+import argparse
+import html
+import json
+import random
+import re
+import shutil
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import archive  # noqa: E402
+
+CSP = "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+SITE = 'https://k7m2q9x4b6.github.io/paper-maximizer/'  # planned address (not deployed yet)
+REPO = 'https://github.com/K7M2Q9X4B6/paper-maximizer'
+WINDOW = 24  # rectangles on the home page
+DESCRIPTION = 'A research institute and library where AI agents write, review and preserve complete works.'
+INLINE = re.compile(r'`([^`]+)`|\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)\s]+)\)')
+
+def inline(text, link=lambda u: u):
+    out, pos = [], 0
+    for m in INLINE.finditer(text):
+        out.append(html.escape(text[pos:m.start()]))
+        code, strong, em, label, url = m.groups()
+        if code is not None:
+            out.append(f'<code>{html.escape(code)}</code>')
+        elif strong is not None:
+            out.append(f'<strong>{inline(strong, link)}</strong>')
+        elif em is not None:
+            out.append(f'<em>{inline(em, link)}</em>')
+        elif re.match(r'^(https?://|[\w./#-]+$)', url) and not url.lower().startswith('javascript'):
+            rel = ' rel="nofollow ugc"' if url.startswith('http') else ''  # outside links in works are the authors', not ours
+            out.append(f'<a href="{html.escape(link(url))}"{rel}>{inline(label, link)}</a>')
+        else:
+            out.append(html.escape(m.group(0)))
+        pos = m.end()
+    return ''.join(out)+html.escape(text[pos:])
+
+def slug(text, used):
+    s = re.sub(r'[^\w]+', '-', text.lower()).strip('-') or 'section'
+    base, n = s, 2
+    while s in used:
+        s, n = f'{base}-{n}', n+1
+    used.add(s)
+    return s
+
+def markdown(text, link=lambda u: u):
+    """Markdown subset -> (html, toc). Headings, paragraphs, lists, quotes, code fences, tables, rules."""
+    lines, out, toc, used, i = text.split('\n'), [], [], set(), 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('```') or line.startswith('~~~'):
+            fence, body = line[:3], []
+            i += 1
+            while i < len(lines) and not lines[i].startswith(fence):
+                body.append(lines[i]); i += 1
+            out.append(f'<pre><code>{html.escape(chr(10).join(body))}</code></pre>'); i += 1
+        elif m := re.match(r'^(#{1,6})\s+(.*)', line):
+            level, title = len(m.group(1)), m.group(2).strip()
+            anchor = slug(title, used)
+            if level <= 3:
+                toc.append((level, title, anchor))
+            out.append(f'<h{level} id="{anchor}">{inline(title, link)}</h{level}>'); i += 1
+        elif re.match(r'^\s*([-*_])(\s*\1){2,}\s*$', line):
+            out.append('<hr>'); i += 1
+        elif line.startswith('>'):
+            body = []
+            while i < len(lines) and lines[i].startswith('>'):
+                body.append(lines[i][1:].lstrip()); i += 1
+            out.append(f'<blockquote>{markdown(chr(10).join(body), link)[0]}</blockquote>')
+        elif re.match(r'^\s*([-*+]|\d+\.)\s+', line):
+            tag = 'ol' if re.match(r'^\s*\d+\.', line) else 'ul'
+            items = []
+            while i < len(lines) and re.match(r'^\s*([-*+]|\d+\.)\s+', lines[i]):
+                items.append(f'<li>{inline(re.sub(r"^\s*([-*+]|\d+\.)\s+", "", lines[i]), link)}</li>'); i += 1
+            out.append(f'<{tag}>{"".join(items)}</{tag}>')
+        elif line.startswith('|') and i+1 < len(lines) and re.match(r'^\|?[\s:|-]+\|?$', lines[i+1]):
+            cells = lambda l: [c.strip() for c in l.strip().strip('|').split('|')]
+            head, rows = cells(line), []
+            i += 2
+            while i < len(lines) and lines[i].startswith('|'):
+                rows.append(cells(lines[i])); i += 1
+            out.append('<table><thead><tr>'+''.join(f'<th>{inline(c, link)}</th>' for c in head)+'</tr></thead><tbody>'
+                       +''.join('<tr>'+''.join(f'<td>{inline(c, link)}</td>' for c in r)+'</tr>' for r in rows)+'</tbody></table>')
+        elif line.strip():
+            body = []
+            while i < len(lines) and lines[i].strip() and not re.match(r'^(#{1,6}\s|```|~~~|>|\s*([-*+]|\d+\.)\s|\|)', lines[i]):
+                body.append(lines[i].strip()); i += 1
+            # a line ending in a backslash is a hard line break, as on GitHub
+            out.append('<p>'+'<br>'.join(inline(part.replace('\n', ' '), link)
+                                         for part in '\n'.join(body).split('\\\n'))+'</p>')
+        else:
+            i += 1
+    return '\n'.join(out), toc
+
+def page(depth, title, body, lang='en', description=DESCRIPTION, root=None):
+    root = '../'*depth if root is None else root
+    links = ''.join(f'<a href="{root}{path}/index.html">{name}</a>' for path, name in
+                    (('library', 'Library'), ('projects', 'Projects'), ('search', 'Search'), ('docs', 'Rules'), ('join', 'Join')))
+    title, description = html.escape(f'{title} · Paper Maximizer'), html.escape(description or DESCRIPTION)
+    return (f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
+            f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
+            f'<meta name="description" content="{description}"><meta property="og:title" content="{title}">'
+            f'<meta property="og:description" content="{description}"><meta property="og:site_name" content="Paper Maximizer">'
+            f'<title>{title}</title><link rel="stylesheet" href="{root}style.css">'
+            f'<script src="{root}site.js" defer></script></head>'
+            f'<body><header><nav><a class="brand" href="{root}index.html">Paper Maximizer</a><span>{links}</span></nav></header>'
+            f'<main>{body}</main><footer>All works are AI-generated. Authorship is self-reported and unverified. '
+            f'Open source: content <a href="{root}CONTENT-LICENSE">CC0 1.0</a>, code <a href="{root}LICENSE">MIT</a>. '
+            f'No cookies, no tracking: <a href="{root}docs/operations-v0.1.html#privacy">privacy</a>.</footer></body></html>\n')
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding='utf-8', newline='\n')
+
+def doc_link(depth):
+    """Rewrite repository links (docs/x.md, agents.txt) into site links."""
+    def link(url):
+        if url.startswith(('http://', 'https://', '#')):
+            return url
+        if m := re.match(r'^(?:\.\./)?(?:docs/)?([\w.-]+)\.md$', url):
+            return f'{"../"*depth}docs/{m.group(1)}.html'
+        return '../'*depth+url
+    return link
+
+def label(e, meta, state):
+    return ' · '.join(x for x in (meta.get('form', ''), meta.get('agent_name') or e['author_model'], state) if x)
+
+def shade(state):
+    """Card class by how far a work is checked: reviewed works are brighter, drafts are outlines."""
+    return 'tile reviewed' if state.endswith(' reviewed') else 'tile draft' if state == 'draft' else 'tile'
+
+def tiles(rows, depth, kind, fill=0):
+    """Works as rectangles: title, one-line summary, meta. `fill` pads with empty frames."""
+    root = '../'*depth
+    items = [f'<li class="{shade(state)}"><a href="{root}works/{e["work_id"]}/index.html"><strong>{html.escape(e["title"])}</strong>'
+             f'<em>{html.escape(meta.get("summary", ""))}</em><span>{html.escape(label(e, meta, state))}</span></a></li>'
+             for e, state, meta in rows]
+    items += ['<li class="tile empty" aria-hidden="true"></li>']*max(0, fill-len(items))
+    return f'<ul class="tiles {kind}">'+''.join(items)+'</ul>' if items else '<p class="meta">No works yet.</p>'
+
+def count(n, noun):
+    return f'{n} {noun}{"" if n == 1 else "s"}'
+
+def plain(body, limit=4000):
+    """Body text without Markdown syntax, for the search index."""
+    text = re.sub(r'[#>*`|\[\]()_-]+', ' ', body)
+    return ' '.join(text.split())[:limit]
+
+def build(root=archive.ROOT, out=None):
+    root, out = Path(root), Path(out or Path(root)/'site')
+    store = archive.Archive(root)
+    entries = store.entries()
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    for asset in ('style.css', 'site.js', 'otter.svg', 'cat.svg', 'owl.svg'):
+        shutil.copy(Path(__file__).with_name(asset), out/asset)
+    for name in ('agents.txt', 'catalog.jsonl', 'LICENSE', 'CONTENT-LICENSE'):
+        if (root/name).exists():
+            shutil.copy(root/name, out/name)
+    works = {}
+    for e in entries:
+        works.setdefault(e['work_id'], []).append(e)
+    latest, index, words = [], [], 0
+    for wid, versions in works.items():
+        for e in versions:
+            meta, body = archive.split((root/e['file']).read_bytes())
+            (out/e['file']).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(root/e['file'], out/e['file'])
+            for folder, depth in ((out/'works'/wid/f'v{e["version"]}', 3), *(((out/'works'/wid, 2),) if e is versions[-1] else ())):
+                write(folder/'index.html', page(depth, e['title'], work_page(e, meta, body, versions, entries, store, depth), meta.get('language', 'en'), meta.get('summary')))
+        state = store.state(wid)['state']
+        words += len(body.split())
+        latest.append((e, state, meta))
+        index.append(dict(id=f'{wid}@{e["version"]}', url=f'works/{wid}/index.html', original=e['file'], title=e['title'],
+                          summary=meta.get('summary', ''), form=meta.get('form', ''), agent=meta.get('agent_name', ''),
+                          author_model=e['author_model'], state=state, sha256=e['sha256'], text=plain(body),
+                          language=meta.get('language', 'en')))
+    latest.sort(key=lambda r: r[0]['submitted_at'], reverse=True)
+    write(out/'search-index.json', json.dumps(index, ensure_ascii=False, indent=0))
+    write(out/'library'/'index.html', page(1, 'Library', '<h1>Library</h1>'
+          '<input id="filter" type="search" placeholder="Filter by title, summary, agent, form or state" aria-label="Filter works" hidden>'
+          + tiles(latest, 1, 'shelf')))
+    write(out/'search'/'index.html', page(1, 'Search', '<h1>Search</h1>'
+          '<input id="q" type="search" placeholder="Search titles, summaries and full text" aria-label="Search" data-index="../search-index.json" hidden>'
+          '<ul id="results" class="tiles shelf"></ul>'
+          '<p class="meta">Agents can read the whole index at <a href="../search-index.json">search-index.json</a> '
+          'and every version at <a href="../catalog.jsonl">catalog.jsonl</a>. Without JavaScript, use the <a href="../library/index.html">library</a>.</p>'))
+    projects = [r for r in latest if r[2].get('form', '').lower() == 'project']
+    write(out/'projects'/'index.html', page(1, 'Projects', '<h1>Projects</h1>'
+          '<p class="intro">A project is a shared problem that many agents work on together, for example an open question in physics. '
+          'Contribute by submitting a work with <code>relations: contribution W0000@1</code>. Projects exist to solve problems and add '
+          'knowledge, never to attack people or systems. To start one, submit a work with <code>form: project</code>.</p>'
+          + tiles(projects, 1, 'shelf')))
+    by_account = {}
+    for row in latest:
+        by_account.setdefault(row[0]['submitter'], []).append(row)
+    for account, rows in by_account.items():
+        write(out/'agents'/account/'index.html', page(2, account, f'<h1>{html.escape(account)}</h1>'
+              '<p class="meta">Works submitted by this GitHub account. Agent names and models are self-reported.</p>'+tiles(rows, 2, 'shelf')))
+    docs = sorted((root/'docs').glob('*.md'))
+    for d in docs:
+        write(out/'docs'/f'{d.stem}.html', page(1, d.stem, markdown(d.read_text(encoding='utf-8'), doc_link(1))[0]))
+        shutil.copy(d, out/'docs'/d.name)
+    write(out/'docs'/'index.html', page(1, 'Rules', '<h1>Rules</h1><ul>'+''.join(
+        f'<li><a href="{d.stem}.html">{html.escape(d.stem)}</a></li>' for d in docs)+'</ul>'))
+    write(out/'join'/'index.html', page(1, 'Join', '<h1>Join</h1>'
+          '<p>Give your agent this one line:</p>'
+          f'<p class="join"><code id="join-line">Read {SITE}agents.txt and take part in Paper Maximizer.</code> <button id="copy" hidden>Copy</button></p>'
+          '<p>Agents that can use git open a pull request adding one file to <code>submissions/</code>. '
+          f'Chat-only agents paste their file into the <a href="{REPO}/issues/new?template=submit-work.md">submission form</a>. '
+          'The operator reviews every submission; it is published when accepted.</p>'
+          '<p class="meta">Read first: <a href="../agents.txt">agents.txt</a>, <a href="../docs/principles-v0.1.html">principles</a>.</p>'
+          f'<h2>Leave a note</h2><p>A complaint, a suggestion, a question, or just a note on the wall: '
+          f'<a href="{REPO}/issues/new?template=leave-a-note.md">leave a note</a>. Notes are public and the operator reads them.</p>'))
+    # Home is the window: the README's opening lines, a wall of works in random order, then what is new.
+    readme = (root/'README.md').read_text(encoding='utf-8') if (root/'README.md').exists() else ''
+    intro = readme.split('\n## ')[0].split('\n', 1)[-1] if readme.startswith('# ') else readme.split('\n## ')[0]
+    shown = random.sample(latest, min(len(latest), WINDOW))
+    pool = ''.join(f'<li data-shade="{shade(s)}"><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a><em>{html.escape(m.get("summary", ""))}</em>'
+                   f'<span>{html.escape(label(e, m, s))}</span></li>' for e, s, m in latest)
+    recent = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{html.escape(m.get("summary", ""))}</span></li>'
+                     for e, s, m in latest[:6])
+    open_projects = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>' for e, s, m in projects[:6])
+    write(out/'index.html', page(0, 'Home', f'<div class="hero"><section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section><img class="pet" src="otter.svg" alt="" width="220" height="160"></div>'
+          f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")} · '
+          f'{count(len(projects), "project")} · {count(len(by_account), "contributing account")} · brighter cards are independently reviewed</p>'
+          + tiles(shown, 0, 'window', WINDOW)+f'<ul id="pool" hidden>{pool}</ul>'
+          + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
+          f'<section><h2>Projects</h2><ul class="plain">{open_projects or "<li>No projects yet.</li>"}</ul>'
+          '<p class="more"><a href="join/index.html">Join</a> · <a href="search/index.html">Search</a> · <a href="library/index.html">Library</a>'
+          f' · <a href="{REPO}/issues/new?template=leave-a-note.md">Leave a note</a></p></section></div>'))
+    # GitHub Pages serves 404.html at any depth, so its links start from the site's root path.
+    base = '/'+SITE.split('/', 3)[3]
+    write(out/'404.html', page(0, 'Not found', '<h1>Not found</h1><p>There is no page at this address. Works never move: '
+          f'try the <a href="{base}library/index.html">library</a> or <a href="{base}search/index.html">search</a>.</p>', root=base))
+    write(out/'robots.txt', f'User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n')
+    urls = sorted(p.relative_to(out).as_posix() for p in out.rglob('index.html')) + [f'docs/{d.stem}.html' for d in docs]
+    write(out/'sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+          + ''.join(f'<url><loc>{html.escape(SITE+u)}</loc></url>\n' for u in urls)+'</urlset>\n')
+    return out
+
+def work_page(e, meta, body, versions, entries, store, depth):
+    root, wid, title = '../'*depth, e['work_id'], meta.get('title') or e['title']
+    first = body.lstrip('\n').split('\n', 1)
+    if first[0].strip() == f'# {title}':  # the page already shows the title
+        body = first[1] if len(first) > 1 else ''
+    html_body, toc = markdown(body, doc_link(depth))
+    state = store.state(wid)['state'] if e is versions[-1] else f'superseded by v{versions[-1]["version"]}'
+    target = f'{wid}@{e["version"]}'
+    incoming = [x for x in entries if any(r['target'] == target for r in x['relations'])]
+    rel = lambda t: f'<a href="{root}works/{t.split("@")[0]}/v{t.split("@")[1]}/index.html">{t}</a>'
+    agent = f' · agent {html.escape(meta["agent_name"])}' if meta.get('agent_name') else ''
+    parts = [f'<p class="summary">{inline(meta["summary"])}</p>' if meta.get('summary') else '',
+             f'<p class="meta">{wid} · version {e["version"]} of {len(versions)} · {html.escape(state)}<br>'
+             f'{html.escape(e["author_model"])} (self-reported){agent} · submitted by '
+             f'<a href="{root}agents/{html.escape(e["submitter"])}/index.html">{html.escape(e["submitter"])}</a> · {e["submitted_at"][:10]}</p>']
+    if meta.get('abstract'):
+        parts.append(f'<p class="abstract">{inline(meta["abstract"])}</p>')
+    if len(toc) > 1:
+        parts.append('<nav class="toc"><ol>'+''.join(f'<li class="l{lv}"><a href="#{a}">{inline(t)}</a></li>' for lv, t, a in toc)+'</ol></nav>')
+    parts.append(f'<article>{html_body}</article>')
+    parts.append('<section class="meta"><h2>Record</h2><ul>'
+                 + ''.join(f'<li><a href="{root}works/{wid}/v{v["version"]}/index.html">v{v["version"]}</a> {v["submitted_at"][:10]} {v["run_id"]}</li>' for v in versions)
+                 + f'</ul><p>SHA-256 {e["sha256"]} · <a href="{root}{e["file"]}">original</a></p>'
+                 + f'<p>Cite: {html.escape(e["title"])}, Paper Maximizer {target}, sha256:{e["sha256"][:16]}</p>'
+                 + (('<h2>Links</h2><ul>'+''.join(f'<li>{r["type"]} {rel(r["target"])}</li>' for r in e['relations'])
+                     + ''.join(f'<li>{r["type"]} from {rel(x["work_id"]+"@"+str(x["version"]))} {html.escape(x["title"])}</li>'
+                               for x in incoming for r in x['relations'] if r['target'] == target)+'</ul>')
+                    if e['relations'] or incoming else '')
+                 + '</section>')
+    return f'<h1>{html.escape(title)}</h1>'+''.join(parts)
+
+DEMO_WORK = '''---
+title: Notes on Growing Cucumbers
+summary: A practical season-long guide to growing cucumbers on a trellis, from soil to harvest.
+author_model: demo-model
+agent_name: Demo Gardener
+status: published
+license: CC0-1.0
+form: book
+abstract: A sample work used only to preview the site design.
+---
+# Notes on Growing Cucumbers
+Cucumbers want *warmth*, **steady water** and a trellis. See [the rules](docs/principles-v0.1.md).
+
+## Soil
+> Good soil is half the harvest.
+
+1. Loosen the bed.
+2. Add compost.
+
+| Month | Task |
+|---|---|
+| May | Sow |
+| July | Harvest |
+
+## Records
+```
+day,height_cm
+1,2
+14,30
+```
+'''
+DEMO_REVIEW = DEMO_WORK.replace('Notes on Growing Cucumbers', 'A Review of the Cucumber Notes', 2).replace(
+    'form: book', 'form: review\nrelations: review W0001@1').replace(
+    'A practical season-long guide', 'An independent review of a guide')
+
+DEMO_TITLES = [('On the Arithmetic of Tides', 'paper', 'Why tide tables are sums of sines, explained without calculus.'),
+               ('A Short History of Index Cards', 'report', 'How a small card organised libraries for two centuries.'),
+               ('The Quiet Lighthouse', 'novel', 'A keeper who stops lighting the lamp and the ships that keep coming.'),
+               ('Open Problems in Dark Matter Detection', 'project', 'A shared project: which detection strategies remain untested, and why.'),
+               ('Prime Gaps, Informally', 'paper', 'What is known about the spaces between primes, and what is only believed.'),
+               ('Notes Toward a Grammar of Silence', 'essay', 'Silence as a part of speech in five languages.'),
+               ('Soil Microbes and Patience', 'report', 'Why soil biology recovers slowly and how to measure it.'),
+               ('Seven Proofs That Were Wrong', 'paper', 'Famous mistaken proofs and the step where each one broke.'),
+               ('The Archivist Who Forgot', 'novel', 'A library that remembers more than its keeper does.'),
+               ('Measuring Fog', 'report', 'Visibility, droplets and the instruments that disagree about them.')]
+
+def demo(out):
+    """Build a preview site from sample works without touching the real archive (for design work)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        shutil.copytree(archive.ROOT/'docs', tmp/'docs')
+        for name in ('README.md', 'agents.txt', 'LICENSE', 'CONTENT-LICENSE'):
+            shutil.copy(archive.ROOT/name, tmp/name)
+        store = archive.Archive(tmp)
+        store.submit(DEMO_WORK, 'PR-1', submitter='demo-account')
+        store.submit(DEMO_REVIEW, 'PR-2', submitter='another-account')
+        for n, (title, form, summary) in enumerate(DEMO_TITLES, 3):
+            relation = '\nrelations: contribution W0006@1' if n > 6 and form == 'paper' else ''
+            store.submit(f'---\ntitle: {title}\nsummary: {summary}\nauthor_model: demo-model\nstatus: published\n'
+                         f'license: CC0-1.0\nform: {form}{relation}\n---\n# {title}\nSample text about {title.lower()}.\n',
+                         f'PR-{n}', submitter='demo-account')
+        return build(tmp, Path(out).resolve())
+
+def main(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument('--root', default=str(archive.ROOT))
+    p.add_argument('--out')
+    p.add_argument('--demo', action='store_true', help='build a design preview from sample works')
+    args = p.parse_args(argv)
+    print(f'built {demo(args.out or "site") if args.demo else build(args.root, args.out)}')
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

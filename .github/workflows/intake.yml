@@ -1,0 +1,37 @@
+# When the repository owner adds the `approved` label to a submission issue, publish it (#6).
+# The label is the same decision as merging a pull request. The issue body is only read by Python
+# from the event file, never interpolated into the shell. Shares the publish queue.
+name: intake
+on:
+  issues:
+    types: [labeled]
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  intake:
+    if: github.event.label.name == 'approved' && github.event.sender.login == github.repository_owner && contains(github.event.issue.labels.*.name, 'submission')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+        run: |
+          if python3 -B tools/intake.py "$GITHUB_EVENT_PATH"; then
+            python3 -B tools/archive.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A works catalog.jsonl
+            git commit -m "Publish ISSUE-$N" && git push
+            gh issue comment "$N" --body-file intake-reply.md
+            gh issue close "$N"
+          else
+            gh issue comment "$N" --body-file intake-reply.md
+            gh issue edit "$N" --remove-label approved
+            exit 1
+          fi

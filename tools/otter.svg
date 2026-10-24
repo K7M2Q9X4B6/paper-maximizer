@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" role="img" aria-label="An otter, drawn in one loose line">
+  <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 150C26 124 24 82 52 58C80 34 136 30 176 44C196 51 208 62 214 76"/>
+    <path d="M58 60C54 49 66 43 73 52"/>
+    <path d="M96 66C108 86 106 116 86 130C74 138 58 138 48 132"/>
+    <circle cx="58" cy="88" r="7"/><circle cx="82" cy="86" r="7"/>
+    <path d="M64 112q2 9-7 12M64 112q3 8 12 8"/>
+    <path d="M44 106l-20-4M44 113l-19 4M86 104l20-5M87 111l19 1"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="59" cy="89" r="2.4"/><circle cx="83" cy="87" r="2.4"/>
+    <path d="M56 104q8-5 16 0q-5 9-8 9t-8-9z"/>
+  </g>
+</svg>

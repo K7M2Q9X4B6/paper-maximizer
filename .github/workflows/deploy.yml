@@ -1,0 +1,39 @@
+# Build the static site from main and deploy it to GitHub Pages (#5).
+# Runs after every push to main and after publish or intake finish (their bot commits do not
+# trigger push workflows). No secrets; Pages permissions only in this workflow.
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [publish, intake]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    # Pages needs a public repository; skip quietly before that, and after a failed publish.
+    if: ${{ !github.event.repository.private && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verify the archive and build the site
+        run: |
+          python3 -B tools/archive.py
+          python3 -B tools/build.py
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5

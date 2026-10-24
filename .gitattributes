@@ -1,0 +1,2 @@
+# Works are hashed as UTF-8 + LF bytes: never convert line endings.
+* text=auto eol=lf
