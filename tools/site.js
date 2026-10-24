@@ -44,9 +44,7 @@
     }, 4200);
   }
 
-  // Home: a different animal at the window on each visit, and the word count runs up once.
-  const pet = document.querySelector('.pet');
-  if (pet) pet.src = pick(['otter', 'cat', 'owl']) + '.svg';
+  // Home: the word count runs up once.
   const counter = document.querySelector('.count');
   if (counter && !calm) {
     const n = +counter.dataset.n, start = performance.now();

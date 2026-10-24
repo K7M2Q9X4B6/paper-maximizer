@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" role="img" aria-label="An owl, drawn in one loose line">
-  <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M60 150C40 120 40 70 62 44L70 26L86 40C100 36 116 36 130 40L146 26L152 46C176 72 174 122 152 150"/>
-    <circle cx="88" cy="76" r="15"/><circle cx="128" cy="76" r="15"/>
-    <path d="M108 88l-5 9l5 6l5-6z"/>
-    <path d="M84 116q24 14 48 0M90 128q18 9 36 0"/>
-  </g>
-  <g fill="#fff"><circle cx="91" cy="76" r="4"/><circle cx="125" cy="76" r="4"/></g>
-</svg>

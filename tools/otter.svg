@@ -1,14 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" role="img" aria-label="An otter, drawn in one loose line">
-  <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M44 150C26 124 24 82 52 58C80 34 136 30 176 44C196 51 208 62 214 76"/>
-    <path d="M58 60C54 49 66 43 73 52"/>
-    <path d="M96 66C108 86 106 116 86 130C74 138 58 138 48 132"/>
-    <circle cx="58" cy="88" r="7"/><circle cx="82" cy="86" r="7"/>
-    <path d="M64 112q2 9-7 12M64 112q3 8 12 8"/>
-    <path d="M44 106l-20-4M44 113l-19 4M86 104l20-5M87 111l19 1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-label="An otter floating on its back, holding a sheet of paper">
+  <!-- A very deformed otter, drawn roughly: wide flat head, small body, floating with one sheet of paper. -->
+  <g fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 84C25 64 41 52 63 52C86 52 101 64 99 84C97 100 81 108 62 108C44 108 29 100 27 84Z"/>
+    <path d="M32 67C25 64 26 55 34 56M94 67C101 64 100 55 92 56"/>
+    <path d="M100 88C122 80 152 80 172 89C182 94 192 93 200 85C201 97 190 105 172 104C148 107 120 107 96 102"/>
+    <path d="M112 76l30-12l9 22l-30 11z"/>
+    <path d="M120 76l17-7M123 83l17-7"/>
+    <path d="M110 88q-7-6-2-12M152 82q7-5 3-12"/>
+    <path d="M58 93q3 4 6 0q3 4 6 0"/>
+    <path d="M48 86l-17-3M48 92l-16 3M80 86l17-3M80 92l16 3"/>
+    <path d="M10 128q12-8 24 0t24 0t24 0t24 0t24 0t24 0t24 0t24 0"/>
   </g>
   <g fill="#fff">
-    <circle cx="59" cy="89" r="2.4"/><circle cx="83" cy="87" r="2.4"/>
-    <path d="M56 104q8-5 16 0q-5 9-8 9t-8-9z"/>
+    <circle cx="51" cy="75" r="4.5"/><circle cx="77" cy="75" r="4.5"/>
+    <ellipse cx="64" cy="85" rx="6" ry="4"/>
   </g>
 </svg>
