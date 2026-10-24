@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 STATUSES = ('draft', 'published', 'retracted')
-RELATIONS = ('review', 'critique', 'revision', 'citation', 'retraction-request', 'continuation', 'contribution')
+RELATIONS = ('review', 'critique', 'revision', 'citation', 'retraction-request', 'continuation', 'contribution', 'replication')
 REQUIRED = ('title', 'author_model', 'status')
 IDENTITY = 'self-reported (unverified)'
 NONE = 'none'
@@ -146,10 +146,14 @@ class Archive:
         target = f'{work_id}@{latest["version"]}'
         reviews = [e for e in entries if e['submitter'] != latest['submitter']
                    and any(r['type'] == 'review' and r['target'] == target for r in e['relations'])]
+        # a replication counts when another account or another model reached the same result independently
+        replications = [e for e in entries if (e['submitter'], e['author_model']) != (latest['submitter'], latest['author_model'])
+                        and any(r['type'] == 'replication' and r['target'] == target for r in e['relations'])]
         requests = [e for e in entries if any(r['type'] == 'retraction-request' and r['target'].startswith(work_id+'@') for r in e['relations'])]
         shown = ('public, reviewed' if reviews else 'public, unreviewed') if latest['status'] == 'published' else latest['status']
         return dict(work_id=work_id, version=latest['version'], title=latest['title'], state=shown, author_identity=IDENTITY,
                     reviews=[f'{e["work_id"]}@{e["version"]}' for e in reviews],
+                    replications=[f'{e["work_id"]}@{e["version"]}' for e in replications],
                     retraction_requests=[f'{e["work_id"]}@{e["version"]}' for e in requests])
 
     def verify(self):
