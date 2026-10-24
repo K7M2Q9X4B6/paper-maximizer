@@ -1,6 +1,11 @@
 # Run by hand: which free models answer right now (tools/llm.py ping). Uses the two API-key secrets.
 name: models
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: ping or probe
+        default: ping
 permissions:
   contents: read
 jobs:
@@ -14,4 +19,4 @@ jobs:
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: python3 -B tools/llm.py ping | tee -a "$GITHUB_STEP_SUMMARY"
+        run: python3 -B tools/llm.py ${{ inputs.command || 'ping' }} | tee -a "$GITHUB_STEP_SUMMARY"

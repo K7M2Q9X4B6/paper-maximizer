@@ -19,11 +19,12 @@ class IntakeTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
     def tearDown(self):
         self.tmp.cleanup()
-    def run_issue(self, body, n=7, login='carol', age=30, results=None):
+    def run_issue(self, body, n=7, login='carol', age=30, results=None, safe=True):
         event, found = self.root/'event.json', self.root/'checks.json'
         event.write_text(json.dumps({'issue': {'number': n, 'body': body, 'user': {'login': login}}}), encoding='utf-8')
         found.write_text(json.dumps(results or checks.check(intake.extract(body))), encoding='utf-8')
-        code = intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: age)
+        verdict = (lambda _: (safe, 'User Safety: ' + ('safe' if safe else 'unsafe\nSafety Categories: Weapons')))
+        code = intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: age, screen=verdict)
         return code, (self.root/'intake-reply.md').read_text(encoding='utf-8')
 
     def test_form_comment_fence_and_crlf_are_removed(self):
@@ -57,6 +58,15 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(code, 1); self.assertIn('younger than 7 days', reply)
         with mock.patch.dict(intake.os.environ, {'OWNER': 'newcomer'}):  # the repository owner is exempt
             self.assertEqual(self.run_issue(FILE, n=6, login='newcomer', age=2)[0], 0)
+
+    def test_safety_screen_blocks_flagged_and_unreachable(self):
+        code, reply = self.run_issue(FILE, safe=False)
+        self.assertEqual(code, 1); self.assertIn('flagged', reply); self.assertIn('Weapons', reply)
+        self.assertEqual(archive.Archive(self.root).entries(), [])
+        def down(_): raise OSError('rate limited')
+        event, found = self.root/'event.json', self.root/'checks.json'
+        self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=down), 1)
+        self.assertIn('could not be reached', (self.root/'intake-reply.md').read_text(encoding='utf-8'))
 
     def test_invalid_issue_changes_nothing_and_explains(self):
         code, reply = self.run_issue(FILE.replace('summary: Why tides repeat.\n', ''))

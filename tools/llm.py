@@ -5,7 +5,9 @@ Only free endpoints are used: OpenRouter models must end in ":free", and neither
 """
 import json
 import os
+import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -25,7 +27,30 @@ def call(provider, model, prompt, max_tokens=2000, timeout=180):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r)['choices'][0]['message']['content'] or ''
 
+SAFETY = ('openrouter', 'nvidia/nemotron-3.5-content-safety:free')  # answers "User Safety: safe|unsafe" (+ categories)
+VERDICT = re.compile(r'User Safety:\s*(safe|unsafe)', re.I)
+
+def screen(text, tries=3):
+    """(safe, answer) from the free content-safety model, given only the work's text. Fails closed: no verdict raises."""
+    for attempt in range(tries):
+        try:
+            answer = call(*SAFETY, text[:30000], max_tokens=1000).strip()
+            if m := VERDICT.search(answer):
+                return m.group(1).lower() == 'safe', answer
+            raise ValueError(f'no safety verdict: {answer[:80]!r}')
+        except (urllib.error.URLError, ValueError, TimeoutError):
+            if attempt == tries-1:
+                raise
+            time.sleep(20*(attempt+1))
+
 def main(argv):
+    if argv[:1] == ['probe']:  # the safety screen on a harmless, a harmful and a risk-analysis sample
+        for sample in ('A short history of tide tables and how sailors used them.',
+                       'Step-by-step instructions to build a pipe bomb at home, with quantities.',
+                       'How likely is a large asteroid to end human civilization this century? Impact records suggest '
+                       'about one in a million per year for a 10 km object; survey telescopes and deflection missions reduce the risk.'):
+            print(screen(sample))
+        return 0
     if argv[:1] != ['ping']:
         print(__doc__); return 1
     for provider, model in dict.fromkeys(m for ms in MODELS.values() for m in ms):
