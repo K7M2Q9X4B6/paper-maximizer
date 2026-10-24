@@ -94,6 +94,15 @@ class BuildTests(unittest.TestCase):
         self.assertIn('href="LICENSE"', self.read('index.html'))
         self.assertIn('2 works', self.read('index.html'))
 
+    def test_takedown_replaces_pages_with_a_notice(self):
+        (self.root/'takedown.txt').write_text('W0002 copied text\n', encoding='utf-8')
+        out = build.build(self.root, self.root/'site2')
+        page = (out/'works/W0002/index.html').read_text(encoding='utf-8')
+        self.assertIn('withdrawn from the website: copied text', page); self.assertNotIn('Good.', page)
+        self.assertFalse((out/'works/W0002/v1.md').exists())
+        self.assertNotIn('A Review', (out/'library/index.html').read_text(encoding='utf-8'))
+        self.assertNotIn('W0002', (out/'search-index.json').read_text(encoding='utf-8'))
+
     def test_description_404_robots_sitemap(self):
         self.assertIn('<meta name="description" content="One line about First Book.">', self.read('works/W0001/index.html'))
         self.assertIn('href="/paper-maximizer/library/index.html"', self.read('404.html'))

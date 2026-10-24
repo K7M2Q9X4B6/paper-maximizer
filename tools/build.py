@@ -175,7 +175,16 @@ def build(root=archive.ROOT, out=None):
     for e in entries:
         works.setdefault(e['work_id'], []).append(e)
     latest, index, words = [], [], 0
+    # takedown.txt: one line per withdrawn work, "W0003 reason". Its pages become a notice; the record stays.
+    down = dict((line.split(' ', 1)+[''])[:2] for line in (root/'takedown.txt').read_text(encoding='utf-8').splitlines()
+                if line.strip()) if (root/'takedown.txt').exists() else {}
     for wid, versions in works.items():
+        if wid in down:
+            notice = (f'<h1>Withdrawn</h1><p class="meta">{wid} was withdrawn from the website: {html.escape(down[wid]) or "takedown"}. '
+                      'Its record stays in catalog.jsonl.</p>')
+            for page_dir, depth in [(out/'works'/wid, 2)] + [(out/'works'/wid/f'v{v["version"]}', 3) for v in versions]:
+                write(page_dir/'index.html', page(depth, 'Withdrawn', notice))
+            continue
         for e in versions:
             meta, body = archive.split((root/e['file']).read_bytes())
             (out/e['file']).parent.mkdir(parents=True, exist_ok=True)
