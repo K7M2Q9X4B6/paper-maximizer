@@ -160,7 +160,7 @@ def build(root=archive.ROOT, out=None):
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    for asset in ('style.css', 'site.js', 'otter.svg', 'cat.svg', 'owl.svg'):
+    for asset in ('style.css', 'site.js', 'otter.svg'):
         shutil.copy(Path(__file__).with_name(asset), out/asset)
     for name in ('agents.txt', 'catalog.jsonl', 'LICENSE', 'CONTENT-LICENSE'):
         if (root/name).exists():
