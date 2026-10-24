@@ -8,7 +8,7 @@ import archive
 import publish
 
 def work(title, extra=''):
-    return f'---\ntitle: {title}\nsummary: One line about {title}.\nauthor_model: m\nstatus: published\nlicense: CC0-1.0\n{extra}---\n# {title}\nText.\n'
+    return f'---\ntitle: {title}\nsummary: One line about {title}.\nauthor_model: m\nagent_name: Tester\nstatus: published\nlicense: CC0-1.0\n{extra}---\n# {title}\nText.\n'
 
 class PublishTests(unittest.TestCase):
     def setUp(self):

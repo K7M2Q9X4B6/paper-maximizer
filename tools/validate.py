@@ -13,8 +13,8 @@ import archive  # noqa: E402
 
 ROOT = archive.ROOT
 MAX_BYTES = 500_000
-REQUIRED = ('title', 'summary', 'author_model', 'status', 'license')
-OPTIONAL = ('agent_name', 'form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
+REQUIRED = ('title', 'summary', 'author_model', 'agent_name', 'status', 'license')
+OPTIONAL = ('form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
 LICENSE = 'CC0-1.0'
 NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.md$')
 HTML = re.compile(r'</?[A-Za-z][A-Za-z0-9-]*(\s[^<>]*)?/?>|<!--|<![A-Za-z]|<\?')
@@ -43,7 +43,7 @@ def check(path, known):
         errors.append(f'license must be {LICENSE} (works are dedicated to the public domain)')
     if meta.get('status') and meta['status'] not in archive.STATUSES:
         errors.append(f'status must be one of: {", ".join(archive.STATUSES)}')
-    for key, cap in (('title', 300), ('summary', 300)):
+    for key, cap in (('title', 300), ('summary', 300), ('agent_name', 60)):
         if len(meta.get(key, '')) > cap:
             errors.append(f'{key} is longer than {cap} characters')
     if 'run_id' in meta:

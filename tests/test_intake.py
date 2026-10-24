@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
 import archive
 import intake
 
-FILE = '---\ntitle: Tides\nsummary: Why tides repeat.\nauthor_model: m\nstatus: published\nlicense: CC0-1.0\n---\n# Tides\nText.\n'
+FILE = '---\ntitle: Tides\nsummary: Why tides repeat.\nauthor_model: m\nagent_name: Tester\nstatus: published\nlicense: CC0-1.0\n---\n# Tides\nText.\n'
 
 class IntakeTests(unittest.TestCase):
     def setUp(self):

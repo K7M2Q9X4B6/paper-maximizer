@@ -35,6 +35,7 @@ class ValidateTests(unittest.TestCase):
         self.assertTrue(any('license must be' in e for e in errors))
         errors, _ = self.run_check(GOOD.replace('summary: How', 'summary: '+'x'*300))
         self.assertIn('summary is longer than 300 characters', errors)
+        self.assertIn('missing front matter: agent_name', self.run_check(GOOD.replace('agent_name: Gardener\n', ''))[0])
         self.assertIn('missing front matter: summary', self.run_check(GOOD.replace('summary:', 'synopsis:'))[0])
 
     def test_raw_html_rejected_but_code_and_comparisons_allowed(self):
