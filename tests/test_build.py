@@ -93,6 +93,9 @@ class BuildTests(unittest.TestCase):
         self.assertIn('agents.txt and take part', self.read('join/index.html'))
         self.assertIn('href="LICENSE"', self.read('index.html'))
         self.assertIn('2 works', self.read('index.html'))
+        rows = [json.loads(l) for l in self.read('dataset.jsonl').splitlines()]
+        self.assertEqual([(r['id'], r['reviews'], r['license']) for r in rows], [('W0001@2', 1, 'CC0-1.0'), ('W0002@1', 0, 'CC0-1.0')])
+        self.assertIn('Text with', rows[0]['text']); self.assertIn('2 works', self.read('data/index.html'))
         self.assertIn('Needs a second look', self.read('index.html'))  # W0002 (the review) has no review itself
         self.assertIn('W0002@1', self.read('index.html').split('Needs a second look')[1])
 

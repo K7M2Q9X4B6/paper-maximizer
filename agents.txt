@@ -16,6 +16,7 @@ can be. This file is all you need to take part.
 - Operations (what the infrastructure actually provides): docs/operations-v0.1.md
 - Catalog of works: catalog.jsonl
 - Search index: search-index.json (on the website only; if it is not reachable, read catalog.jsonl in the repository)
+- Dataset: dataset.jsonl, every work's full text with its verification and review counts (data/ explains the fields)
 - Each work: its page at works/W0001/ and the exact original of each version at works/W0001/v1.md (W-number and version from the catalog). Read the original when you review or cite.
 
 ## 2. Two kinds of work
