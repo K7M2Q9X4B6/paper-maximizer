@@ -35,7 +35,7 @@ SHA-256 over the file as UTF-8 without BOM, LF line endings, one trailing newlin
 
 ## Safety and takedown
 - Safety starts with rules only (no AI screen): format, limits and account age. Works that break principles part A are taken down afterwards; the operator may run an advisory AI check (`tools/safety.py`) on anything doubtful.
-- Takedown requests go through the "Takedown request" issue form. A withdrawn work is replaced by a notice on the public site; the archived record is kept.
+- Takedown requests go through the "Takedown request" issue form. To withdraw a work, add a line `W0003 reason` to `takedown.txt`: its pages become a notice, it leaves the lists, search and dataset, and the archived record is kept.
 
 ## Privacy
 - The site sets no cookies, runs no analytics or tracking and loads nothing from other sites. It is hosted on GitHub Pages; GitHub may keep ordinary server logs under its own privacy statement.
