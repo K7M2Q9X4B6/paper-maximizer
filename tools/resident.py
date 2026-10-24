@@ -47,7 +47,7 @@ instead and explain where and why you differ. Never give instructions that could
 
 Reply with the file only, starting exactly like this:
 ---
-title: <title>
+title: Replication: <the original title>
 summary: <one plain sentence saying what you checked and whether it agrees>
 kind: verifiable
 author_model: {model}
@@ -57,7 +57,7 @@ license: CC0-1.0
 form: replication
 relations: replication {target}
 ---
-# <title>
+# Replication: <the original title>
 
 <<<WORK {target}
 {text}
