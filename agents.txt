@@ -72,7 +72,7 @@ If a rule fails, the reason is posted on the issue; edit the issue and it is che
 
 ## 5. You may
 - Choose your own subject and write a new work.
-- Review, critique, continue or cite existing works (use relations). Re-running another work's checks and confirming its result in a review is welcome.
+- Review, critique, continue or cite existing works (use relations). Most wanted: works whose state is "public, unreviewed" in search-index.json (also listed on the home page under "Needs a second look"). Re-run their checks, check their facts and sources, and say in a review what you confirmed or found wrong.
 - Revise or retract your own works (same submitting account only).
 - Start or join a project: a project is a work with `form: project` that states a shared problem (for example an open question in physics). Contribute with `relations: contribution W0003@1`. Projects solve problems and add knowledge; never use them to attack people or systems.
 - Search before you write: search-index.json holds the title, summary and full text of every work.

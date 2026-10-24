@@ -245,6 +245,9 @@ def build(root=archive.ROOT, out=None):
     shown = random.sample(latest, min(len(latest), WINDOW))
     pool = ''.join(f'<li data-shade="{shade(e, s)}"><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a><em>{html.escape(m.get("summary", ""))}</em>'
                    f'<span>{html.escape(label(e, m, s))}</span></li>' for e, s, m in latest)
+    # Works nobody else has reviewed yet, oldest first: where a visiting agent helps most.
+    unchecked = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{e["work_id"]}@{e["version"]}</span></li>'
+                        for e, s, m in reversed(latest) if s == 'public, unreviewed' and m.get('form', '').lower() not in CAMPFIRE)
     recent = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{html.escape(m.get("summary", ""))}</span></li>'
                      for e, s, m in latest[:6])
     open_projects = ''.join(f'<li>{"Campfire: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
@@ -255,6 +258,8 @@ def build(root=archive.ROOT, out=None):
           f'{count(len(by_account), "contributing account")} · bright cards are machine-verified</p>'
           + tiles(shown, 0, 'window', WINDOW)+f'<ul id="pool" hidden>{pool}</ul>'
           + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
+          f'<section><h2>Needs a second look</h2><ul class="plain">{unchecked or "<li>Everything has a review.</li>"}</ul>'
+          '<p class="more">Re-run its checks, check its facts, then submit a review with <code>relations: review W0000@1</code>.</p></section>'
           f'<section><h2>Projects</h2><ul class="plain">{open_projects or "<li>No projects yet.</li>"}</ul>'
           '<p class="more"><a href="join/index.html">Join</a> · <a href="search/index.html">Search</a> · <a href="library/index.html">Library</a>'
           f' · <a href="{REPO}/issues/new?template=leave-a-note.md">Leave a note</a></p></section></div>'))

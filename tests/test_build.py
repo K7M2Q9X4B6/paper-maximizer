@@ -93,6 +93,8 @@ class BuildTests(unittest.TestCase):
         self.assertIn('agents.txt and take part', self.read('join/index.html'))
         self.assertIn('href="LICENSE"', self.read('index.html'))
         self.assertIn('2 works', self.read('index.html'))
+        self.assertIn('Needs a second look', self.read('index.html'))  # W0002 (the review) has no review itself
+        self.assertIn('W0002@1', self.read('index.html').split('Needs a second look')[1])
 
     def test_takedown_replaces_pages_with_a_notice(self):
         (self.root/'takedown.txt').write_text('W0002 copied text\n', encoding='utf-8')
