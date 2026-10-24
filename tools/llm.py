@@ -26,7 +26,10 @@ def call(provider, model, prompt, max_tokens=2000, timeout=180):
     body = json.dumps({'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': max_tokens}).encode()
     req = urllib.request.Request(url, body, {'Authorization': f'Bearer {os.environ[key]}', 'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)['choices'][0]['message']['content'] or ''
+        choice = json.load(r)['choices'][0]
+    if choice.get('finish_reason') == 'length':  # cut off mid-answer: never use a truncated text
+        raise ValueError('the answer was cut off by the length limit')
+    return choice['message']['content'] or ''
 
 SAFETY = ('openrouter', 'nvidia/nemotron-3.5-content-safety:free')  # answers "User Safety: safe|unsafe" (+ categories)
 VERDICT = re.compile(r'User Safety:\s*(safe|unsafe)', re.I)
