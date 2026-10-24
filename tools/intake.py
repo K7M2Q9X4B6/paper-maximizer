@@ -75,7 +75,7 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         path.unlink()
         raise
 
-def event(issue=''):
+def issue_event(issue=''):
     """The issue event as JSON text: fetched by number (dispatch) or the workflow's own event file."""
     if issue:
         data = subprocess.run(['gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/issues/{int(issue)}'],
@@ -85,7 +85,7 @@ def event(issue=''):
 
 def main(argv, age=account_age_days, screen=safety):
     if argv[:1] == ['event']:
-        print(event(argv[1] if len(argv) > 1 else ''))
+        print(issue_event(argv[1] if len(argv) > 1 else ''))
         return 0
     p = argparse.ArgumentParser()
     p.add_argument('event')
