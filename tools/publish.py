@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import archive  # noqa: E402
 import validate  # noqa: E402
 
-def publish(root, run_id, submitter, via='pull-request'):
+def publish(root, run_id, submitter, via='pull-request', extra=None):
     root = Path(root)
     store = archive.Archive(root)
     files = sorted((root/'submissions').glob('*.md'))
@@ -23,7 +23,7 @@ def publish(root, run_id, submitter, via='pull-request'):
     published = []
     for f in files:
         meta, _ = archive.split(archive.normalize(f.read_bytes()))
-        entry = store.submit(f.read_bytes(), run_id, meta.get('work') or None, via=via, submitter=submitter)
+        entry = store.submit(f.read_bytes(), run_id, meta.get('work') or None, via=via, submitter=submitter, extra=extra)
         f.unlink()
         published.append(f'{entry["work_id"]}@{entry["version"]} {entry["title"]}')
     return published

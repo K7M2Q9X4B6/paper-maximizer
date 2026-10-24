@@ -24,7 +24,7 @@ h1{font-size:2.1rem;margin:2.6rem 0 .6rem}
 .tile em+span{margin-top:auto}
 .tile span{color:var(--ink-muted);font-size:.7rem;letter-spacing:.04em}
 .tile:hover{border-color:var(--fg);transform:translateY(-3px)}
-.tile.reviewed{background:#fbfaf7;box-shadow:0 0 1.2rem rgba(255,255,255,.08)}
+.tile.verified{background:#fbfaf7;box-shadow:0 0 1.2rem rgba(255,255,255,.08)}
 .tile.draft{background:none;border-style:dashed;border-color:var(--edge)}.tile.draft a{color:var(--fg)}.tile.draft em,.tile.draft span{color:var(--muted)}
 .tile.empty{background:none;border-color:var(--faint);animation:rise .8s ease both,breathe 11s ease-in-out infinite alternate}
 .tile.fade{opacity:0;transform:translateY(6px)}

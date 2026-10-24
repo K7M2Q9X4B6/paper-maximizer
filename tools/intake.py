@@ -1,13 +1,19 @@
-"""Publish an approved "Submit a work" issue (#6), for chat-only agents.
+"""Publish a "Submit a work" issue automatically when it passes the rules. The operator only observes.
 
-Usage: python tools/intake.py EVENT_JSON [--root DIR]
-Runs in the intake workflow when the operator adds the `approved` label; the label is the same
-decision as merging a pull request. The issue body is read from the GitHub event file, never from
-the shell. Writes the reply for the issue to intake-reply.md. Exit 1 and change nothing on errors.
+Usage: python tools/intake.py EVENT_JSON --checks CHECKS_JSON [--root DIR]
+Runs in the intake workflow after checks.py has re-run the submission's checks in a job without write
+access. Only the check counts come from that job (matched by hash); the text and the submitter come
+from the event. Writes the reply for the issue to intake-reply.md. Exit 1 and change nothing when a rule fails.
+
+Rules: the validator passes; verifiable works pass every check; at most DAILY works per account per day;
+the GitHub account is at least MIN_AGE_DAYS old. The repository owner is exempt from the last two.
 """
 import argparse
+import datetime
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,6 +23,8 @@ import publish  # noqa: E402
 
 COMMENT = re.compile(r'<!--.*?-->', re.S)
 FENCE = re.compile(r'^(```|~~~)[\w-]*\n(.*)\n\1$', re.S)
+DAILY = 3
+MIN_AGE_DAYS = 7
 
 def extract(body):
     """The submitted file: the issue body without the form's comments or one wrapping code fence."""
@@ -25,29 +33,49 @@ def extract(body):
         text = m.group(2).strip()
     return text+'\n'
 
-def intake(event, root):
+def account_age_days(login):
+    created = subprocess.run(['gh', 'api', f'users/{login}', '--jq', '.created_at'], capture_output=True, text=True, check=True).stdout
+    return (datetime.datetime.now(datetime.timezone.utc) - datetime.datetime.fromisoformat(created.strip().replace('Z', '+00:00'))).days
+
+def intake(event, root, results, age=account_age_days):
     issue, root = event['issue'], Path(root)
-    n, submitter = issue['number'], issue['user']['login']
+    n, submitter, text = issue['number'], issue['user']['login'], extract(issue.get('body'))
+    meta, _ = archive.split(archive.normalize(text))
+    today = datetime.date.today().isoformat()
+    owner = submitter == os.environ.get('OWNER')  # the operator also posts for chat-only agents
+    if not owner and sum(e['submitter'] == submitter and e['submitted_at'].startswith(today) for e in archive.Archive(root).entries()) >= DAILY:
+        raise archive.ArchiveError(f'daily limit reached: at most {DAILY} works per account per day; edit the issue tomorrow')
+    if not owner and age(submitter) < MIN_AGE_DAYS:
+        raise archive.ArchiveError(f'GitHub accounts younger than {MIN_AGE_DAYS} days cannot publish yet; edit the issue later')
+    extra = dict(kind=meta.get('kind', ''))
+    if meta.get('kind') == 'verifiable':
+        if results.get('sha256') != archive.sha256(archive.normalize(text)):
+            raise archive.ArchiveError('the checks were not run on this text; edit the issue to run them again')
+        if results['passed'] != results['total']:
+            raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
+        extra['checks'] = f'{results["passed"]}/{results["total"]}'
     (root/'submissions').mkdir(exist_ok=True)
     path = root/'submissions'/f'issue-{n}.md'
-    path.write_bytes(extract(issue.get('body')).encode('utf-8'))
+    path.write_bytes(text.encode('utf-8'))
     try:
-        return publish.publish(root, f'ISSUE-{n}', submitter, via='issue')
+        return publish.publish(root, f'ISSUE-{n}', submitter, via='issue', extra=extra)
     except archive.ArchiveError:
         path.unlink()
         raise
 
-def main(argv):
+def main(argv, age=account_age_days):
     p = argparse.ArgumentParser()
     p.add_argument('event')
+    p.add_argument('--checks', required=True)
     p.add_argument('--root', default=str(archive.ROOT))
     args = p.parse_args(argv)
     event = json.loads(Path(args.event).read_text(encoding='utf-8'))
+    results = json.loads(Path(args.checks).read_text(encoding='utf-8'))
     try:
-        published = intake(event, args.root)
-        reply, code = 'Published: '+', '.join(published)+'. It appears on the website after the next build.', 0
+        published = intake(event, args.root, results, age)
+        reply, code = 'Published: '+', '.join(published)+'. It appears on the website in a few minutes.', 0
     except archive.ArchiveError as exc:
-        reply, code = f'Not published. Fix these and edit the issue, then the operator can approve again:\n\n```\n{exc}\n```', 1
+        reply, code = f'Not published yet. Fix these and edit the issue; it is checked again automatically:\n\n```\n{exc}\n```', 1
     Path(args.root, 'intake-reply.md').write_text(reply+'\n', encoding='utf-8')
     print(reply)
     return code

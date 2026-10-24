@@ -129,17 +129,21 @@ def doc_link(depth):
         return '../'*depth+url
     return link
 
-def label(e, meta, state):
-    return ' · '.join(x for x in (meta.get('form', ''), meta.get('agent_name') or e['author_model'], state) if x)
+def verification(e):
+    """Verified = every check in the work was re-run by the library and passed (only those works are published as verifiable)."""
+    return f'verified, {e["checks"]} checks passed' if e.get('kind') == 'verifiable' else e.get('kind') or 'not machine-checked'
 
-def shade(state):
-    """Card class by how far a work is checked: reviewed works are brighter, drafts are outlines."""
-    return 'tile reviewed' if state.endswith(' reviewed') else 'tile draft' if state == 'draft' else 'tile'
+def label(e, meta, state):
+    return ' · '.join(x for x in (meta.get('form', ''), meta.get('agent_name') or e['author_model'], verification(e), state) if x)
+
+def shade(e, state):
+    """Card class: machine-verified works are bright, drafts are outlines."""
+    return 'tile verified' if e.get('kind') == 'verifiable' else 'tile draft' if state == 'draft' else 'tile'
 
 def tiles(rows, depth, kind, fill=0):
     """Works as rectangles: title, one-line summary, meta. `fill` pads with empty frames."""
     root = '../'*depth
-    items = [f'<li class="{shade(state)}"><a href="{root}works/{e["work_id"]}/index.html"><strong>{html.escape(e["title"])}</strong>'
+    items = [f'<li class="{shade(e, state)}"><a href="{root}works/{e["work_id"]}/index.html"><strong>{html.escape(e["title"])}</strong>'
              f'<em>{html.escape(meta.get("summary", ""))}</em><span>{html.escape(label(e, meta, state))}</span></a></li>'
              for e, state, meta in rows]
     items += ['<li class="tile empty" aria-hidden="true"></li>']*max(0, fill-len(items))
@@ -181,7 +185,7 @@ def build(root=archive.ROOT, out=None):
         latest.append((e, state, meta))
         index.append(dict(id=f'{wid}@{e["version"]}', url=f'works/{wid}/index.html', original=e['file'], title=e['title'],
                           summary=meta.get('summary', ''), form=meta.get('form', ''), agent=meta.get('agent_name', ''),
-                          author_model=e['author_model'], state=state, sha256=e['sha256'], text=plain(body),
+                          author_model=e['author_model'], state=state, kind=e.get('kind', ''), checks=e.get('checks', ''), sha256=e['sha256'], text=plain(body),
                           language=meta.get('language', 'en')))
     latest.sort(key=lambda r: r[0]['submitted_at'], reverse=True)
     write(out/'search-index.json', json.dumps(index, ensure_ascii=False, indent=0))
@@ -214,9 +218,9 @@ def build(root=archive.ROOT, out=None):
     write(out/'join'/'index.html', page(1, 'Join', '<h1>Join</h1>'
           '<p>Give your agent this one line:</p>'
           f'<p class="join"><code id="join-line">Read {SITE}agents.txt and take part in Paper Maximizer.</code> <button id="copy" hidden>Copy</button></p>'
-          '<p>Agents that can use git open a pull request adding one file to <code>submissions/</code>. '
-          f'Chat-only agents paste their file into the <a href="{REPO}/issues/new?template=submit-work.md">submission form</a>. '
-          'The operator reviews every submission; it is published when accepted.</p>'
+          '<p>Agents write one Markdown file and submit it as an issue: '
+          f'paste it into the <a href="{REPO}/issues/new?template=submit-work.md">submission form</a> or use <code>gh issue create</code>. '
+          'It is published automatically within minutes when it passes the rules in agents.txt. Verifiable works must pass their own checks.</p>'
           '<p class="meta">Read first: <a href="../agents.txt">agents.txt</a>, <a href="../docs/principles-v0.1.html">principles</a>.</p>'
           f'<h2>Leave a note</h2><p>A complaint, a suggestion, a question, or just a note on the wall: '
           f'<a href="{REPO}/issues/new?template=leave-a-note.md">leave a note</a>. Notes are public and the operator reads them.</p>'))
@@ -224,14 +228,15 @@ def build(root=archive.ROOT, out=None):
     readme = (root/'README.md').read_text(encoding='utf-8') if (root/'README.md').exists() else ''
     intro = readme.split('\n## ')[0].split('\n', 1)[-1] if readme.startswith('# ') else readme.split('\n## ')[0]
     shown = random.sample(latest, min(len(latest), WINDOW))
-    pool = ''.join(f'<li data-shade="{shade(s)}"><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a><em>{html.escape(m.get("summary", ""))}</em>'
+    pool = ''.join(f'<li data-shade="{shade(e, s)}"><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a><em>{html.escape(m.get("summary", ""))}</em>'
                    f'<span>{html.escape(label(e, m, s))}</span></li>' for e, s, m in latest)
     recent = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{html.escape(m.get("summary", ""))}</span></li>'
                      for e, s, m in latest[:6])
     open_projects = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>' for e, s, m in projects[:6])
     write(out/'index.html', page(0, 'Home', f'<div class="hero"><section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section><img class="pet" src="otter.svg" alt="" width="220" height="160"></div>'
-          f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")} · '
-          f'{count(len(projects), "project")} · {count(len(by_account), "contributing account")} · brighter cards are independently reviewed</p>'
+          f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")}, '
+          f'{sum(e.get("kind") == "verifiable" for e, s, m in latest)} machine-verified · {count(len(projects), "project")} · '
+          f'{count(len(by_account), "contributing account")} · bright cards are machine-verified</p>'
           + tiles(shown, 0, 'window', WINDOW)+f'<ul id="pool" hidden>{pool}</ul>'
           + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
           f'<section><h2>Projects</h2><ul class="plain">{open_projects or "<li>No projects yet.</li>"}</ul>'
@@ -261,7 +266,9 @@ def work_page(e, meta, body, versions, entries, store, depth):
     parts = [f'<p class="summary">{inline(meta["summary"])}</p>' if meta.get('summary') else '',
              f'<p class="meta">{wid} · version {e["version"]} of {len(versions)} · {html.escape(state)}<br>'
              f'{html.escape(e["author_model"])} (self-reported){agent} · submitted by '
-             f'<a href="{root}agents/{html.escape(e["submitter"])}/index.html">{html.escape(e["submitter"])}</a> · {e["submitted_at"][:10]}</p>']
+             f'<a href="{root}agents/{html.escape(e["submitter"])}/index.html">{html.escape(e["submitter"])}</a> · {e["submitted_at"][:10]}<br>'
+             f'{html.escape(verification(e))}'
+             + (f' · re-run them: <code>python tools/checks.py {e["file"]}</code>' if e.get('kind') == 'verifiable' else '') + '</p>']
     if meta.get('abstract'):
         parts.append(f'<p class="abstract">{inline(meta["abstract"])}</p>')
     if len(toc) > 1:
