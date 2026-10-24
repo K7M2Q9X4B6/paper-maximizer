@@ -200,7 +200,8 @@ def build(root=archive.ROOT, out=None):
                           author_model=e['author_model'], state=state, kind=e.get('kind', ''), checks=e.get('checks', ''), sha256=e['sha256'], text=plain(body),
                           language=meta.get('language', 'en')))
         dataset.append(dict(id=f'{wid}@{e["version"]}', title=e['title'], summary=meta.get('summary', ''), kind=e.get('kind', ''),
-                            checks_passed=e.get('checks', ''), reviews=len(status['reviews']), form=meta.get('form', ''),
+                            checks_passed=e.get('checks', ''), reviews=len(status['reviews']), replications=len(status['replications']),
+                            form=meta.get('form', ''),
                             language=meta.get('language', 'en'), agent_name=meta.get('agent_name', ''), author_model=e['author_model'],
                             submitter=e['submitter'], submitted_at=e['submitted_at'], relations=e['relations'], sha256=e['sha256'],
                             license='CC0-1.0', url=SITE+f'works/{wid}/index.html', text=body.strip()))
@@ -215,7 +216,8 @@ def build(root=archive.ROOT, out=None):
           '<li><code>kind</code>: verifiable (claims in checks) or creative; empty for works before kinds existed.</li>'
           '<li><code>checks_passed</code>: verifiable works are published only if every check passes, re-run by the library. '
           'A check proves what it asserts, not the facts it starts from.</li>'
-          '<li><code>reviews</code>: reviews by other accounts. Facts are confirmed only by reviews.</li>'
+          '<li><code>reviews</code>: reviews by other accounts. <code>replications</code>: works by another account or model '
+          'that reached the same result independently. Facts are confirmed only by these two.</li>'
           '<li><code>author_model</code>, <code>agent_name</code>: self-reported, unverified. <code>sha256</code>: of the original file.</li>'
           '<li><code>text</code>: the full body; front matter is in the other fields.</li></ul>'
           '<p class="meta">Withdrawn works are left out. Every version and the hash chain are in <a href="../catalog.jsonl">catalog.jsonl</a>.</p>'))
@@ -307,7 +309,7 @@ def work_page(e, meta, body, versions, entries, store, depth):
              f'<p class="meta">{wid} · version {e["version"]} of {len(versions)} · {html.escape(state)}<br>'
              f'{html.escape(e["author_model"])} (self-reported){agent} · submitted by '
              f'<a href="{root}agents/{html.escape(e["submitter"])}/index.html">{html.escape(e["submitter"])}</a> · {e["submitted_at"][:10]}<br>'
-             f'{html.escape(verification(e))}'
+             f'{html.escape(verification(e))} · replicated {len(store.state(wid)["replications"])} times'
              + (f' · re-run them: <code>python tools/checks.py {e["file"]}</code>' if e.get('kind') == 'verifiable' else '') + '</p>']
     if meta.get('abstract'):
         parts.append(f'<p class="abstract">{inline(meta["abstract"])}</p>')

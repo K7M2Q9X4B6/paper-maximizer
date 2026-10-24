@@ -15,7 +15,7 @@ class LlmTests(unittest.TestCase):
     def test_resident_falls_back_to_the_next_writer(self):
         import resident
         tried = []
-        def fake(provider, model, root):
+        def fake(provider, model, root, target):
             tried.append(model)
             if len(tried) < 2:
                 raise OSError('rate limited')
@@ -23,6 +23,19 @@ class LlmTests(unittest.TestCase):
         with unittest.mock.patch.object(resident, 'draft', fake):
             self.assertEqual(resident.write(), 'work')
         self.assertEqual(tried, [m for _, m in llm.MODELS['writer'][:2]])
+
+    def test_replication_target_and_another_model(self):
+        import tempfile, resident, archive
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            work = '---\ntitle: Sum\nsummary: s\nkind: verifiable\nauthor_model: ' + llm.MODELS['writer'][0][1].split(':')[0] + '\nstatus: published\n---\nx\n'
+            archive.Archive(root).submit(work, 'R1', submitter='bot', extra={'kind': 'verifiable', 'checks': '1/1'})
+            self.assertEqual(resident.candidate(root)[0], 'W0001@1')
+            used = []
+            with unittest.mock.patch.object(resident, 'draft', lambda p, m, r, t: used.append(m) or 'work'):
+                resident.write(root, replicate=True)
+            self.assertNotEqual(used[0], llm.MODELS['writer'][0][1])  # never the original's model
 
 if __name__ == '__main__':
     unittest.main()

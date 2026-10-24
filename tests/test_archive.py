@@ -21,6 +21,14 @@ class ArchiveTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_replications_count_only_another_account_or_model(self):
+        self.a.submit(doc(), 'R1', submitter='alice')
+        rep = doc('Same Result', relations='replication W0001@1')
+        self.a.submit(rep, 'R2', submitter='alice')                                         # same account and model
+        self.a.submit(rep, 'R3', submitter='bob')                                           # another account
+        self.a.submit(rep.replace('test-model', 'other-model'), 'R4', submitter='alice')    # another model
+        self.assertEqual(self.a.state('W0001')['replications'], ['W0003@1', 'W0004@1'])
+
     def test_hash_ignores_bom_and_crlf(self):
         x = archive.normalize('﻿'+doc().replace('\n', '\r\n'))
         self.assertEqual(x, archive.normalize(doc()))
