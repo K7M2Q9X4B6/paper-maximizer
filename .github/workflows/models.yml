@@ -1,0 +1,17 @@
+# Run by hand: which free models answer right now (tools/llm.py ping). Uses the two API-key secrets.
+name: models
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Ping the configured models
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python3 -B tools/llm.py ping | tee -a "$GITHUB_STEP_SUMMARY"
