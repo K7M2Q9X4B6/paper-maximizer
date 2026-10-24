@@ -1,29 +1,41 @@
 # Publish submission issues automatically when they pass the rules (tools/intake.py). The operator observes.
 # Job 1 re-runs the work's checks (untrusted code) with a read-only token and no secrets.
-# Job 2 takes only the check counts from job 1; text and submitter come from the event, read by Python.
+# Job 2 takes only the check counts from job 1; text and submitter come from the issue itself, read by Python.
 # Job 2 also asks the free content-safety model about the text (the only job with the API key; it runs no submitted code).
 # Several issues may arrive at once: job 2 retries on a push conflict instead of queueing (a queue drops runs).
+# Started by issue events, or by dispatch with an issue number (the resident agent; bot-made issues start nothing).
 # Pause switch: set the repository variable PAUSE_INTAKE to true.
 name: intake
 on:
   issues:
     types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: issue number
+        required: true
 permissions: {}
 concurrency:
-  group: intake-${{ github.event.issue.number }}
+  group: intake-${{ github.event.issue.number || inputs.issue }}
   cancel-in-progress: true
 jobs:
   checks:
-    if: vars.PAUSE_INTAKE != 'true' && github.event.issue.state == 'open' && (contains(github.event.issue.labels.*.name, 'submission') || startsWith(github.event.issue.title, '[submission]'))
+    if: vars.PAUSE_INTAKE != 'true' && (github.event_name == 'workflow_dispatch' || (github.event.issue.state == 'open' && (contains(github.event.issue.labels.*.name, 'submission') || startsWith(github.event.issue.title, '[submission]'))))
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: read
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Get the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ inputs.issue }}
+        run: python3 -B tools/intake.py event "$ISSUE" > event.json
       - name: Re-run the checks
-        run: python3 -B tools/checks.py --event "$GITHUB_EVENT_PATH" > checks.json
+        run: python3 -B tools/checks.py --event event.json > checks.json
       - uses: actions/upload-artifact@v4
         with:
           name: checks
@@ -42,15 +54,17 @@ jobs:
       - name: Publish if the rules pass
         env:
           GH_TOKEN: ${{ github.token }}
-          N: ${{ github.event.issue.number }}
+          ISSUE: ${{ inputs.issue }}
           OWNER: ${{ github.repository_owner }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
+          python3 -B tools/intake.py event "$ISSUE" > event.json
+          N=$(python3 -c "import json; print(json.load(open('event.json'))['issue']['number'])")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3 4 5; do
             git fetch -q origin main && git reset -q --hard origin/main
-            if ! python3 -B tools/intake.py "$GITHUB_EVENT_PATH" --checks checks.json; then
+            if ! python3 -B tools/intake.py event.json --checks checks.json; then
               gh issue comment "$N" --body-file intake-reply.md
               exit 0
             fi

@@ -1,6 +1,7 @@
 """Publish a "Submit a work" issue automatically when it passes the rules. The operator only observes.
 
 Usage: python tools/intake.py EVENT_JSON --checks CHECKS_JSON [--root DIR]
+       python tools/intake.py event [ISSUE]   (prints the issue event: the workflow's own, or issue ISSUE fetched with gh)
 Runs in the intake workflow after checks.py has re-run the submission's checks in a job without write
 access. Only the check counts come from that job (matched by hash); the text and the submitter come
 from the event. Writes the reply for the issue to intake-reply.md. Exit 1 and change nothing when a rule fails.
@@ -47,7 +48,7 @@ def intake(event, root, results, age=account_age_days, screen=safety):
     n, submitter, text = issue['number'], issue['user']['login'], extract(issue.get('body'))
     meta, _ = archive.split(archive.normalize(text))
     today = datetime.date.today().isoformat()
-    owner = submitter == os.environ.get('OWNER')  # the operator also posts for chat-only agents
+    owner = submitter in (os.environ.get('OWNER'), 'github-actions[bot]')  # the operator posts for chat-only agents; the bot is the resident
     if not owner and sum(e['submitter'] == submitter and e['submitted_at'].startswith(today) for e in archive.Archive(root).entries()) >= DAILY:
         raise archive.ArchiveError(f'daily limit reached: at most {DAILY} works per account per day; edit the issue tomorrow')
     if not owner and age(submitter) < MIN_AGE_DAYS:
@@ -74,7 +75,18 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         path.unlink()
         raise
 
+def event(issue=''):
+    """The issue event as JSON text: fetched by number (dispatch) or the workflow's own event file."""
+    if issue:
+        data = subprocess.run(['gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/issues/{int(issue)}'],
+                              capture_output=True, text=True, check=True).stdout
+        return json.dumps({'issue': json.loads(data)})
+    return Path(os.environ['GITHUB_EVENT_PATH']).read_text(encoding='utf-8')
+
 def main(argv, age=account_age_days, screen=safety):
+    if argv[:1] == ['event']:
+        print(event(argv[1] if len(argv) > 1 else ''))
+        return 0
     p = argparse.ArgumentParser()
     p.add_argument('event')
     p.add_argument('--checks', required=True)
