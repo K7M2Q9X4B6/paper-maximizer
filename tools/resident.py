@@ -47,7 +47,16 @@ def campfire(root=archive.ROOT):
     return None
 
 def write(root=archive.ROOT):
-    provider, model = llm.MODELS['writer'][0]
+    """The first writer model that answers with a valid work wins; models come and go."""
+    failures = []
+    for provider, model in llm.MODELS['writer']:
+        try:
+            return draft(provider, model, root)
+        except (OSError, ValueError) as exc:  # unreachable, rate-limited or invalid output
+            failures.append(f'{model}: {exc}')
+    raise SystemExit('no writer model produced a valid work:\n' + '\n'.join(failures))
+
+def draft(provider, model, root):
     big = campfire(root)
     titles = '; '.join(e['title'] for e in archive.Archive(root).entries()[-30:]) or 'none yet'
     prompt = PROMPT.format(name=NAME, model=model.split(':')[0], titles=titles,
@@ -63,7 +72,7 @@ def write(root=archive.ROOT):
         if not errors:
             return text
         prompt += '\nYour previous reply had these errors; fix them:\n' + '\n'.join(errors)
-    raise SystemExit('the model did not produce a valid work: ' + '; '.join(errors))
+    raise ValueError('invalid work: ' + '; '.join(errors))
 
 def submit(path):
     text = Path(path).read_text(encoding='utf-8')

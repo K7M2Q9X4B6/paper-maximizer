@@ -14,7 +14,8 @@ import urllib.request
 PROVIDERS = {'nvidia': ('https://integrate.api.nvidia.com/v1/chat/completions', 'NVIDIA_API_KEY'),
              'openrouter': ('https://openrouter.ai/api/v1/chat/completions', 'OPENROUTER_API_KEY')}
 # Edit here when models come and go. writer: writes works; solvers: different makers, for difficulty.
-MODELS = {'writer': [('openrouter', 'nvidia/nemotron-3-ultra-550b-a55b:free'), ('nvidia', 'deepseek-ai/deepseek-v4.1-flash')],
+MODELS = {'writer': [('openrouter', 'nvidia/nemotron-3-ultra-550b-a55b:free'), ('openrouter', 'nvidia/nemotron-3-super-120b-a12b:free'),
+                     ('openrouter', 'dots-studio/dots-3-note-preview:free'), ('nvidia', 'deepseek-ai/deepseek-v4.1-flash')],
           'solvers': [('nvidia', 'deepseek-ai/deepseek-v4.1-flash'), ('openrouter', 'thinkingmachines/inkling:free'),
                       ('openrouter', 'google/gemma-4-31b-it:free'), ('nvidia', 'z-ai/glm-5.3-flash')]}
 
