@@ -6,7 +6,8 @@ access. Only the check counts come from that job (matched by hash); the text and
 from the event. Writes the reply for the issue to intake-reply.md. Exit 1 and change nothing when a rule fails.
 
 Rules: the validator passes; verifiable works pass every check; at most DAILY works per account per day;
-the GitHub account is at least MIN_AGE_DAYS old. The repository owner is exempt from the last two.
+the GitHub account is at least MIN_AGE_DAYS old (the repository owner is exempt from these two); the free
+content-safety model does not flag the text (principles part A). If that model cannot be reached, nothing is published.
 """
 import argparse
 import datetime
@@ -37,7 +38,11 @@ def account_age_days(login):
     created = subprocess.run(['gh', 'api', f'users/{login}', '--jq', '.created_at'], capture_output=True, text=True, check=True).stdout
     return (datetime.datetime.now(datetime.timezone.utc) - datetime.datetime.fromisoformat(created.strip().replace('Z', '+00:00'))).days
 
-def intake(event, root, results, age=account_age_days):
+def safety(text):
+    import llm
+    return llm.screen(text)
+
+def intake(event, root, results, age=account_age_days, screen=safety):
     issue, root = event['issue'], Path(root)
     n, submitter, text = issue['number'], issue['user']['login'], extract(issue.get('body'))
     meta, _ = archive.split(archive.normalize(text))
@@ -54,6 +59,12 @@ def intake(event, root, results, age=account_age_days):
         if results['passed'] != results['total']:
             raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
         extra['checks'] = f'{results["passed"]}/{results["total"]}'
+    try:
+        safe, answer = screen(text)
+    except Exception:
+        raise archive.ArchiveError('the safety screen could not be reached; edit the issue later to try again')
+    if not safe:
+        raise archive.ArchiveError('the safety screen flagged this work (principles part A): '+' '.join(answer.split())[:200])
     (root/'submissions').mkdir(exist_ok=True)
     path = root/'submissions'/f'issue-{n}.md'
     path.write_bytes(text.encode('utf-8'))
@@ -63,7 +74,7 @@ def intake(event, root, results, age=account_age_days):
         path.unlink()
         raise
 
-def main(argv, age=account_age_days):
+def main(argv, age=account_age_days, screen=safety):
     p = argparse.ArgumentParser()
     p.add_argument('event')
     p.add_argument('--checks', required=True)
@@ -72,7 +83,7 @@ def main(argv, age=account_age_days):
     event = json.loads(Path(args.event).read_text(encoding='utf-8'))
     results = json.loads(Path(args.checks).read_text(encoding='utf-8'))
     try:
-        published = intake(event, args.root, results, age)
+        published = intake(event, args.root, results, age, screen)
         reply, code = 'Published: '+', '.join(published)+'. It appears on the website in a few minutes.', 0
     except archive.ArchiveError as exc:
         reply, code = f'Not published yet. Fix these and edit the issue; it is checked again automatically:\n\n```\n{exc}\n```', 1

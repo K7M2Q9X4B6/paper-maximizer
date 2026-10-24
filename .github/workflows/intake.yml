@@ -1,6 +1,7 @@
 # Publish submission issues automatically when they pass the rules (tools/intake.py). The operator observes.
 # Job 1 re-runs the work's checks (untrusted code) with a read-only token and no secrets.
 # Job 2 takes only the check counts from job 1; text and submitter come from the event, read by Python.
+# Job 2 also asks the free content-safety model about the text (the only job with the API key; it runs no submitted code).
 # Several issues may arrive at once: job 2 retries on a push conflict instead of queueing (a queue drops runs).
 # Pause switch: set the repository variable PAUSE_INTAKE to true.
 name: intake
@@ -43,6 +44,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.event.issue.number }}
           OWNER: ${{ github.repository_owner }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
