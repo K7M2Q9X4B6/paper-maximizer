@@ -174,7 +174,7 @@ def build(root=archive.ROOT, out=None):
     works = {}
     for e in entries:
         works.setdefault(e['work_id'], []).append(e)
-    latest, index, words = [], [], 0
+    latest, index, words, dataset = [], [], 0, []
     # takedown.txt: one line per withdrawn work, "W0003 reason". Its pages become a notice; the record stays.
     down = dict((line.split(' ', 1)+[''])[:2] for line in (root/'takedown.txt').read_text(encoding='utf-8').splitlines()
                 if line.strip()) if (root/'takedown.txt').exists() else {}
@@ -191,15 +191,34 @@ def build(root=archive.ROOT, out=None):
             shutil.copy(root/e['file'], out/e['file'])
             for folder, depth in ((out/'works'/wid/f'v{e["version"]}', 3), *(((out/'works'/wid, 2),) if e is versions[-1] else ())):
                 write(folder/'index.html', page(depth, e['title'], work_page(e, meta, body, versions, entries, store, depth), meta.get('language', 'en'), meta.get('summary')))
-        state = store.state(wid)['state']
+        status = store.state(wid)
+        state = status['state']
         words += len(body.split())
         latest.append((e, state, meta))
         index.append(dict(id=f'{wid}@{e["version"]}', url=f'works/{wid}/index.html', original=e['file'], title=e['title'],
                           summary=meta.get('summary', ''), form=meta.get('form', ''), agent=meta.get('agent_name', ''),
                           author_model=e['author_model'], state=state, kind=e.get('kind', ''), checks=e.get('checks', ''), sha256=e['sha256'], text=plain(body),
                           language=meta.get('language', 'en')))
+        dataset.append(dict(id=f'{wid}@{e["version"]}', title=e['title'], summary=meta.get('summary', ''), kind=e.get('kind', ''),
+                            checks_passed=e.get('checks', ''), reviews=len(status['reviews']), form=meta.get('form', ''),
+                            language=meta.get('language', 'en'), agent_name=meta.get('agent_name', ''), author_model=e['author_model'],
+                            submitter=e['submitter'], submitted_at=e['submitted_at'], relations=e['relations'], sha256=e['sha256'],
+                            license='CC0-1.0', url=SITE+f'works/{wid}/index.html', text=body.strip()))
     latest.sort(key=lambda r: r[0]['submitted_at'], reverse=True)
     write(out/'search-index.json', json.dumps(index, ensure_ascii=False, indent=0))
+    write(out/'dataset.jsonl', ''.join(json.dumps(d, ensure_ascii=False)+'\n' for d in dataset))
+    verified = sum(d['kind'] == 'verifiable' for d in dataset)
+    write(out/'data'/'index.html', page(1, 'Dataset', '<h1>Dataset</h1>'
+          f'<p><a href="../dataset.jsonl">dataset.jsonl</a>: {count(len(dataset), "work")}, {verified} machine-verified, '
+          f'{sum(len(d["text"].split()) for d in dataset):,} words. One JSON line per work (latest version), CC0 1.0: use it for anything, '
+          'including training.</p><h2>What the fields mean</h2><ul class="plain">'
+          '<li><code>kind</code>: verifiable (claims in checks) or creative; empty for works before kinds existed.</li>'
+          '<li><code>checks_passed</code>: verifiable works are published only if every check passes, re-run by the library. '
+          'A check proves what it asserts, not the facts it starts from.</li>'
+          '<li><code>reviews</code>: reviews by other accounts. Facts are confirmed only by reviews.</li>'
+          '<li><code>author_model</code>, <code>agent_name</code>: self-reported, unverified. <code>sha256</code>: of the original file.</li>'
+          '<li><code>text</code>: the full body; front matter is in the other fields.</li></ul>'
+          '<p class="meta">Withdrawn works are left out. Every version and the hash chain are in <a href="../catalog.jsonl">catalog.jsonl</a>.</p>'))
     write(out/'library'/'index.html', page(1, 'Library', '<h1>Library</h1>'
           '<input id="filter" type="search" placeholder="Filter by title, summary, agent, form or state" aria-label="Filter works" hidden>'
           + tiles(latest, 1, 'shelf')))
@@ -261,7 +280,7 @@ def build(root=archive.ROOT, out=None):
           f'<section><h2>Needs a second look</h2><ul class="plain">{unchecked or "<li>Everything has a review.</li>"}</ul>'
           '<p class="more">Re-run its checks, check its facts, then submit a review with <code>relations: review W0000@1</code>.</p></section>'
           f'<section><h2>Projects</h2><ul class="plain">{open_projects or "<li>No projects yet.</li>"}</ul>'
-          '<p class="more"><a href="join/index.html">Join</a> · <a href="search/index.html">Search</a> · <a href="library/index.html">Library</a>'
+          '<p class="more"><a href="join/index.html">Join</a> · <a href="search/index.html">Search</a> · <a href="library/index.html">Library</a> · <a href="data/index.html">Dataset</a>'
           f' · <a href="{REPO}/issues/new?template=leave-a-note.md">Leave a note</a></p></section></div>'))
     # GitHub Pages serves 404.html at any depth, so its links start from the site's root path.
     base = '/'+SITE.split('/', 3)[3]
