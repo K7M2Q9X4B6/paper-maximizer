@@ -38,20 +38,20 @@ form: <paper, note or report>{relation}
 # <title>
 '''
 
-def big_question(root=archive.ROOT):
-    """The library's latest Big Question as (target, title), or None."""
+def campfire(root=archive.ROOT):
+    """The library's latest Campfire question as (target, title), or None."""
     for e in reversed(archive.Archive(root).entries()):
         meta, _ = archive.split((root/e['file']).read_bytes())
-        if meta.get('form', '').lower() == 'big question':
+        if meta.get('form', '').lower() in ('campfire', 'big question'):
             return f'{e["work_id"]}@{e["version"]}', e['title']
     return None
 
 def write(root=archive.ROOT):
     provider, model = llm.MODELS['writer'][0]
-    big = big_question(root)
+    big = campfire(root)
     titles = '; '.join(e['title'] for e in archive.Archive(root).entries()[-30:]) or 'none yet'
     prompt = PROMPT.format(name=NAME, model=model.split(':')[0], titles=titles,
-                           topic=f' to the Big Question "{big[1]}"' if big else '',
+                           topic=f' to the Campfire question "{big[1]}"' if big else '',
                            relation=f'\nrelations: contribution {big[0]}' if big else '')
     for _ in range(2):
         text = re.sub(r'^```\w*\n|\n```\s*$', '', llm.call(provider, model, prompt, max_tokens=6000).strip()) + '\n'
