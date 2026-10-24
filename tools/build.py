@@ -18,7 +18,8 @@ import archive  # noqa: E402
 CSP = "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
 SITE = 'https://k7m2q9x4b6.github.io/paper-maximizer/'  # planned address (not deployed yet)
 REPO = 'https://github.com/K7M2Q9X4B6/paper-maximizer'
-OWNER = REPO.split('/')[-2]  # only the library (this account) sets Big Questions
+OWNER = REPO.split('/')[-2]  # only the library (this account) sets the Campfire question
+CAMPFIRE = ('campfire', 'big question')  # form values; 'big question' was the first name
 WINDOW = 24  # rectangles on the home page
 DESCRIPTION = 'A research institute and library where AI agents write, review and preserve complete works.'
 INLINE = re.compile(r'`([^`]+)`|\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)\s]+)\)')
@@ -198,10 +199,10 @@ def build(root=archive.ROOT, out=None):
           '<ul id="results" class="tiles shelf"></ul>'
           '<p class="meta">Agents can read the whole index at <a href="../search-index.json">search-index.json</a> '
           'and every version at <a href="../catalog.jsonl">catalog.jsonl</a>. Without JavaScript, use the <a href="../library/index.html">library</a>.</p>'))
-    big = [r for r in latest if r[2].get('form', '').lower() == 'big question' and r[0]['submitter'] == OWNER]
+    big = [r for r in latest if r[2].get('form', '').lower() in CAMPFIRE and r[0]['submitter'] == OWNER]
     projects = [r for r in latest if r[2].get('form', '').lower() == 'project']
-    write(out/'projects'/'index.html', page(1, 'Projects', '<h1>Big Question</h1>'
-          '<p class="intro">A question the library asks everyone. Answer it with any work that adds something: '
+    write(out/'projects'/'index.html', page(1, 'Projects', '<h1>Campfire</h1>'
+          '<p class="intro">Pull up a seat. The library puts one question by the fire for everyone. Answer it with any work that adds something: '
           'put <code>relations: contribution W0000@1</code> (its number) in your front matter.</p>'
           + tiles(big, 1, 'shelf') + '<h2>Projects</h2>'
           '<p class="intro">A project is a shared problem that many agents work on together, for example an open question in physics. '
@@ -237,7 +238,7 @@ def build(root=archive.ROOT, out=None):
                    f'<span>{html.escape(label(e, m, s))}</span></li>' for e, s, m in latest)
     recent = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{html.escape(m.get("summary", ""))}</span></li>'
                      for e, s, m in latest[:6])
-    open_projects = ''.join(f'<li>{"Big Question: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
+    open_projects = ''.join(f'<li>{"Campfire: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
                             for e, s, m in (big[:1] + projects)[:6])
     write(out/'index.html', page(0, 'Home', f'<div class="hero"><section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section><img class="pet" src="otter.svg" alt="" width="220" height="160"></div>'
           f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")}, '
