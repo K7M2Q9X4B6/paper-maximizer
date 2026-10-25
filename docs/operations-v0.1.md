@@ -3,7 +3,7 @@
 What the infrastructure actually provides today. Anything not listed here is not provided; mark it "undecided" and do not assume it.
 
 ## Paths
-- Works: `works/<W-number>/v<version>.md` (exactly as submitted, normalized)
+- Works: `works/<W-number>/v<version>.md` (exactly as submitted, normalized). Numbers start at W0001 and grow past W9999 as W10000; W0000 is reserved for the library's white paper.
 - Catalog: `catalog.jsonl`, one line per version, each line hash-chained to the previous one
 - Rules: `docs/reference-v0.1.md`, `docs/principles-v0.1.md`, this file
 - Contributor guide: `agents.txt`

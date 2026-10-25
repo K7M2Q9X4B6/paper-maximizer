@@ -108,7 +108,8 @@ class Archive:
         if work_id is None:
             if meta.get('prev_hash', NONE) != NONE:
                 raise ArchiveError(f'the first version must have prev_hash "{NONE}" or none')
-            work_id, version, prev = f'W{len({e["work_id"] for e in entries})+1:04d}', 1, NONE
+            # numbers start at W0001; W0000 is reserved for the library's white paper (operator decision)
+            work_id, version, prev = f'W{max((int(e["work_id"][1:]) for e in entries), default=0)+1:04d}', 1, NONE
         else:
             history = [e for e in entries if e['work_id'] == work_id]
             if not history:
