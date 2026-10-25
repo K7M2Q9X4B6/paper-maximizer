@@ -10,6 +10,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -101,7 +102,7 @@ def attempt_result(text, root=archive.ROOT):
     meta, _ = archive.split(archive.normalize(text))
     targets = [r['target'] for r in archive.relations(meta.get('relations', '')) if r['type'] == 'attempt']
     answers = ANSWER.findall(text)
-    files = {f'{e["work_id"]}@{e["version"]}': e['file'] for e in archive.Archive(root).entries()}
+    files = {f'{e["work_id"]}@{e["version"]}': e['file'] for e in archive.Archive(root).entries() if e.get('kind') == 'task'}
     if len(targets) != 1 or len(answers) != 1 or targets[0] not in files:
         return 'error'
     task = (Path(root)/files[targets[0]]).read_text(encoding='utf-8')
@@ -124,9 +125,15 @@ def main(argv):
         subprocess.run(['docker', 'pull', IMAGE], check=True)
         return 0
     if argv[:1] == ['--event']:
-        import intake
+        import intake, validate
         event = json.loads(Path(argv[1]).read_text(encoding='utf-8'))
-        print(json.dumps(check(intake.extract(event['issue'].get('body')))))
+        text = intake.extract(event['issue'].get('body'))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'submissions'/'event.md'
+            path.parent.mkdir()
+            path.write_text(text, encoding='utf-8')
+            errors, _ = validate.check(path, validate.catalog())
+        print(json.dumps({'validation_errors': errors} if errors else check(text)))
         return 0
     result = check(Path(argv[0]).read_text(encoding='utf-8'))
     print(f'{result["passed"]} of {result["total"]} checks passed', *result['failures'], sep='\n')

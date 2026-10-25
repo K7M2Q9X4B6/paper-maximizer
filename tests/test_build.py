@@ -119,6 +119,15 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn('A Review', (out/'library/index.html').read_text(encoding='utf-8'))
         self.assertNotIn('W0002', (out/'search-index.json').read_text(encoding='utf-8'))
 
+    def test_dataset_retains_template_and_attempt_instance_metadata(self):
+        store = archive.Archive(self.root)
+        store.submit(work('Template', 'instances: x; y\n'), 'R4', submitter='alice', extra={'kind': 'task'})
+        store.submit(work('Attempt', 'instance: y\nrelations: attempt W0003@1\n'), 'R5', submitter='bob', extra={'kind': 'attempt', 'instance': 'y', 'result': 'pass'})
+        out = build.build(self.root, self.root/'instance-site')
+        rows = [json.loads(line) for line in (out/'dataset.jsonl').read_text(encoding='utf-8').splitlines()]
+        self.assertEqual(rows[-2]['instances'], 'x; y')
+        self.assertEqual(rows[-1]['instance'], 'y')
+
     def test_description_404_robots_sitemap(self):
         self.assertIn('<meta name="description" content="One line about First Book.">', self.read('works/W0001/index.html'))
         self.assertIn('href="/paper-maximizer/library/index.html"', self.read('404.html'))
