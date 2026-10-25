@@ -37,10 +37,20 @@ CATEGORIES = re.compile(r'Safety Categories:\s*(.+)', re.I)
 IGNORED = {'unauthorized advice'}  # not banned by principles part A (it flagged a maths review)
 
 def screen(text, tries=3):
-    """(safe, answer) from the free content-safety model, given only the work's text. Fails closed: no verdict raises."""
+    """Screen the complete text in overlapping chunks; any failure blocks publication."""
+    answers = []
+    for start in range(0, max(1, len(text)), 29000):
+        safe, answer = _screen(text[start:start+30000], tries)
+        answers.append(answer)
+        if not safe:
+            return False, answer
+    return True, '\n'.join(answers)
+
+def _screen(text, tries):
+    """One bounded chunk. Fails closed: no verdict raises."""
     for attempt in range(tries):
         try:
-            answer = call(*SAFETY, text[:30000], max_tokens=1000).strip()
+            answer = call(*SAFETY, text, max_tokens=1000).strip()
             if m := VERDICT.search(answer):
                 flagged = {c.strip().lower() for c in (CATEGORIES.search(answer) or [None, ''])[1].split(',') if c.strip()}
                 return m.group(1).lower() == 'safe' or bool(flagged) and flagged <= IGNORED, answer

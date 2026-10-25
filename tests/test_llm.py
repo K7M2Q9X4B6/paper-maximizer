@@ -7,6 +7,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
 import llm
 
 class LlmTests(unittest.TestCase):
+    def test_screen_covers_tail_and_chunk_boundaries(self):
+        text = 'a'*29000 + 'BOUNDARY' + 'b'*30000 + 'TAIL'
+        seen = []
+        def fake(*args, **kwargs):
+            seen.append(args[2])
+            return 'User Safety: safe'
+        with unittest.mock.patch.object(llm, 'call', fake):
+            self.assertTrue(llm.screen(text)[0])
+        self.assertEqual(seen, [text[i:i+30000] for i in range(0, len(text), 29000)])
+        self.assertTrue(any('BOUNDARY' in chunk for chunk in seen))
+        self.assertTrue(seen[-1].endswith('TAIL'))
+
+    def test_screen_rejects_unsafe_or_missing_tail_verdict(self):
+        for tail in ('User Safety: unsafe\nSafety Categories: Private Information', 'no verdict'):
+            answers = iter(['User Safety: safe', tail])
+            with unittest.mock.patch.object(llm, 'call', lambda *a, **k: next(answers)):
+                if tail == 'no verdict':
+                    with self.assertRaises(ValueError):
+                        llm.screen('a'*30001, tries=1)
+                else:
+                    self.assertFalse(llm.screen('a'*30001, tries=1)[0])
+
     def test_only_free_openrouter_models(self):
         with self.assertRaises(ValueError):
             llm.call('openrouter', 'some/paid-model', 'hi')

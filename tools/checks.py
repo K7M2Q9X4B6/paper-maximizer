@@ -3,14 +3,14 @@ library only) that must exit without error within 10 seconds. Verified = every c
 
 Usage: python tools/checks.py FILE.md        (anyone can re-run a published work's checks)
        python tools/checks.py --event EVENT  (intake workflow: checks of a submission issue, as JSON)
-Checks are untrusted code: run them only where there is no write token and no secret.
+Checks require Docker with Linux containers. Prepare the pinned image with --pull.
+Submitted code has no network, host mounts, credentials, or access to the result artifact.
 """
 import json
-import os
 import re
 import subprocess
 import sys
-import tempfile
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -21,33 +21,44 @@ FENCED = lambda name: re.compile(rf'^```{name}[ \t]*\n(.*?)^```[ \t]*$', re.S | 
 VERIFY, REFERENCE, ANSWER = FENCED('verify'), FENCED('reference'), FENCED('answer')
 TRIVIAL = ('', '0')  # a task's verifier must reject these
 SECONDS = 10
+IMAGE = 'python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704'
 
 def blocks(text):
     return BLOCK.findall(text)
 
 def run(code):
-    """(passed, message) for one check, in a fresh interpreter with an empty environment."""
-    env = {k: os.environ[k] for k in ('PATH', 'SYSTEMROOT') if k in os.environ}
-    with tempfile.TemporaryDirectory() as tmp:
+    status, message = _execute(code)
+    return status == 0, message
+
+def _execute(code):
+    """A disposable, resource-limited container; never fall back to host execution."""
+    name = 'paper-check-' + uuid.uuid4().hex
+    command = ['docker', 'run', '--rm', '-i', '--pull=never', '--name', name,
+               '--network=none', '--read-only', '--cap-drop=ALL',
+               '--security-opt=no-new-privileges', '--user=65534:65534',
+               '--pids-limit=32', '--memory=128m', '--memory-swap=128m', '--cpus=1',
+               '--log-driver=none', '--tmpfs=/tmp:rw,noexec,nosuid,size=16m', '--workdir=/tmp',
+               IMAGE, 'python', '-I', '-']
+    try:
+        r = subprocess.run(command, input=code, text=True, encoding='utf-8',
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=SECONDS)
+        return r.returncode, '' if r.returncode == 0 else f'check container exited with code {r.returncode}'
+    except subprocess.TimeoutExpired:
+        return None, f'took longer than {SECONDS} seconds'
+    except OSError:
+        return None, 'Docker unavailable; install/start Docker and run tools/checks.py --pull'
+    finally:
         try:
-            r = subprocess.run([sys.executable, '-I', '-c', code], cwd=tmp, env=env, capture_output=True,
-                               text=True, encoding='utf-8', errors='replace', timeout=SECONDS)
-        except subprocess.TimeoutExpired:
-            return False, f'took longer than {SECONDS} seconds'
-    return r.returncode == 0, (r.stderr.strip().splitlines() or [''])[-1][:200]
+            subprocess.run(['docker', 'rm', '-f', name], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
 def judge(verify_code, answer):
     """True or False from the task's verify(answer), or None if it errors or runs too long."""
-    env = {k: os.environ[k] for k in ('PATH', 'SYSTEMROOT') if k in os.environ}
-    code = verify_code + '\nimport sys\nprint("VERDICT", bool(verify(sys.stdin.read())))'
-    with tempfile.TemporaryDirectory() as tmp:
-        try:
-            r = subprocess.run([sys.executable, '-I', '-c', code], input=answer, cwd=tmp, env=env, capture_output=True,
-                               text=True, encoding='utf-8', errors='replace', timeout=SECONDS)
-        except subprocess.TimeoutExpired:
-            return None
-    last = (r.stdout.strip().splitlines() or [''])[-1]
-    return {'VERDICT True': True, 'VERDICT False': False}.get(last) if r.returncode == 0 else None
+    code = verify_code + f'\nimport sys\nsys.exit(0 if verify({answer!r}) else 3)'
+    status, _ = _execute(code)
+    return {0: True, 3: False}.get(status)
 
 def task_problems(text):
     """Why a task is not yet usable: its reference must pass, trivial answers fail, reruns agree."""
@@ -84,6 +95,9 @@ def check(text, root=archive.ROOT):
                 **({'result': attempt_result(text, root)} if kind == 'attempt' else {}))
 
 def main(argv):
+    if argv == ['--pull']:
+        subprocess.run(['docker', 'pull', IMAGE], check=True)
+        return 0
     if argv[:1] == ['--event']:
         import intake
         event = json.loads(Path(argv[1]).read_text(encoding='utf-8'))

@@ -13,6 +13,16 @@ def work(title, extra='', body='# Part one\nText with `code`.\n\n## Part two\n- 
     return f'---\ntitle: {title}\nsummary: One line about {title}.\nauthor_model: m\nstatus: published\nlicense: CC0-1.0\n{extra}---\n{body}'
 
 class MarkdownTests(unittest.TestCase):
+    def test_language_cannot_inject_markup_before_csp(self):
+        page = build.page(0, 'Test', 'Text', 'en"><script>probe()</script><html lang="en')
+        self.assertNotIn('<script>probe()', page)
+        self.assertIn('lang="en&quot;&gt;&lt;script&gt;', page)
+        self.assertEqual(re.findall(r'<script[^>]*>', page), ['<script src="site.js" defer>'])
+
+    def test_non_table_pipe_lines_are_plain_paragraphs(self):
+        out, _ = build.markdown('| alone\n\n|\n\n| no separator\nnext line')
+        self.assertEqual(out, '<p>| alone</p>\n<p>|</p>\n<p>| no separator next line</p>')
+
     def test_everything_is_escaped(self):
         out, _ = build.markdown('<script>alert(1)</script>\n\n[x](javascript:alert(1)) **<b>**')
         self.assertNotIn('<script>', out); self.assertNotIn('<b>', out); self.assertNotIn('href="javascript', out)

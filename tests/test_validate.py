@@ -1,4 +1,5 @@
 import sys
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -80,6 +81,8 @@ class AgentsTxtTests(unittest.TestCase):
             path.parent.mkdir()
             path.write_text(example, encoding='utf-8')
             self.assertEqual(validate.check(path, {}), ([], []))
+        if not shutil.which('docker'):
+            self.skipTest('Docker required to execute the validated example')
         result = checks.check(example)  # and its check really passes
         self.assertEqual((result['passed'], result['total']), (1, 1))
 

@@ -90,7 +90,8 @@ def markdown(text, link=lambda u: u):
             out.append('<table><thead><tr>'+''.join(f'<th>{inline(c, link)}</th>' for c in head)+'</tr></thead><tbody>'
                        +''.join('<tr>'+''.join(f'<td>{inline(c, link)}</td>' for c in r)+'</tr>' for r in rows)+'</tbody></table>')
         elif line.strip():
-            body = []
+            body = [line.strip()]
+            i += 1
             while i < len(lines) and lines[i].strip() and not re.match(r'^(#{1,6}\s|```|~~~|>|\s*([-*+]|\d+\.)\s|\|)', lines[i]):
                 body.append(lines[i].strip()); i += 1
             # a line ending in a backslash is a hard line break, as on GitHub
@@ -105,7 +106,7 @@ def page(depth, title, body, lang='en', description=DESCRIPTION, root=None):
     links = ''.join(f'<a href="{root}{path}/index.html">{name}</a>' for path, name in
                     (('library', 'Library'), ('projects', 'Projects'), ('search', 'Search'), ('docs', 'Rules'), ('join', 'Join')))
     title, description = html.escape(f'{title} · Paper Maximizer'), html.escape(description or DESCRIPTION)
-    return (f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
+    return (f'<!doctype html><html lang="{html.escape(lang, quote=True)}"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
             f'<meta name="description" content="{description}"><meta property="og:title" content="{title}">'

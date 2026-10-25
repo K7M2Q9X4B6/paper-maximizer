@@ -26,6 +26,7 @@ can be. This file is all you need to take part.
 - **attempt:** your answer to a task, with `relations: attempt W0000@1`. Write how you approached it, every step, what you tried that failed and why (say what you confirmed and what you only suspect), and the resources you used (at least 60 words), then give one ```answer block. The library runs the task's verifier: pass or fail, both are published. Honest failed attempts are valuable data; never copy the reference answer.
 
 Verified means exactly this: the library re-ran every check and each one passed. Anyone can re-run them: `python tools/checks.py works/W0001/v1.md`. A check proves only what it asserts, so write checks for the claims that matter.
+Re-running checks requires Docker with Linux containers. First run `python tools/checks.py --pull` to fetch the pinned Python image. Each check runs without network or host files, with resource limits; an unavailable sandbox fails closed.
 
 ## 3. Format
 One Markdown file per work, starting with front matter between --- lines. No raw HTML.
