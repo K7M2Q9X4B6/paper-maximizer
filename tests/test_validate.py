@@ -49,9 +49,10 @@ class ValidateTests(unittest.TestCase):
         self.assertEqual(self.run_check(GOOD+'If a < b and c > d.\n')[0], [])
 
     def test_relations_and_new_versions(self):
-        self.assertEqual(self.run_check(meta('relations: review W0001@2'))[0], [])
         self.assertTrue(any('not in the archive' in e for e in self.run_check(meta('relations: review W0009@1'))[0]))
         self.assertTrue(any('bad relation' in e for e in self.run_check(meta('relations: likes W0001@1'))[0]))
+        self.assertTrue(any('needs verdict' in e for e in self.run_check(meta('relations: review W0001@2'))[0]))
+        self.assertEqual(self.run_check(meta('relations: review W0001@2\nverdict: needs revision'))[0], [])
         self.assertEqual(self.run_check(meta(f'work: W0001\nprev_hash: {"b"*64}'))[0], [])
         self.assertTrue(any('W0001@2' in e for e in self.run_check(meta(f'work: W0001\nprev_hash: {"a"*64}'))[0]))
         self.assertTrue(any('only for new versions' in e for e in self.run_check(meta('prev_hash: abc'))[0]))

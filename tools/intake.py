@@ -53,7 +53,7 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         raise archive.ArchiveError(f'daily limit reached: at most {DAILY} works per account per day; edit the issue tomorrow')
     if not owner and age(submitter) < MIN_AGE_DAYS:
         raise archive.ArchiveError(f'GitHub accounts younger than {MIN_AGE_DAYS} days cannot publish yet; edit the issue later')
-    extra = dict(kind=meta.get('kind', ''))
+    extra = dict(kind=meta.get('kind', ''), **({'verdict': meta['verdict']} if meta.get('verdict') else {}))
     if meta.get('kind') == 'verifiable':
         if results.get('sha256') != archive.sha256(archive.normalize(text)):
             raise archive.ArchiveError('the checks were not run on this text; edit the issue to run them again')
