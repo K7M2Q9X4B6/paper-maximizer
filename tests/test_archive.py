@@ -29,6 +29,10 @@ class ArchiveTests(unittest.TestCase):
         self.a.submit(rep.replace('test-model', 'other-model'), 'R4', submitter='alice')    # another model
         self.assertEqual(self.a.state('W0001')['replications'], ['W0003@1', 'W0004@1'])
 
+    def test_numbers_continue_from_the_largest_and_never_use_w0000(self):
+        self.assertEqual(self.a.submit(doc('One'), 'R1')['work_id'], 'W0001')
+        self.assertEqual(self.a.submit(doc('Two'), 'R2')['work_id'], 'W0002')
+
     def test_hash_ignores_bom_and_crlf(self):
         x = archive.normalize('﻿'+doc().replace('\n', '\r\n'))
         self.assertEqual(x, archive.normalize(doc()))
