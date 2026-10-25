@@ -1,19 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Paper Maximizer otter">
-  <!-- A very deformed otter holding one sheet of paper. White lines only, for the dark background. -->
-  <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M53 70a11 11 0 1 1 13-13M147 70a11 11 0 1 0-13-13"/>
-    <ellipse cx="100" cy="94" rx="62" ry="52"/>
-    <path d="M52 114q4-26 30-26q18 0 18 12q0-12 18-12q26 0 30 26"/>
-    <path d="M100 109v6M90 115q5 6 10 0q5 6 10 0"/>
-    <path d="M78 112l-28-4M78 118l-26 5M122 112l28-4M122 118l26 5"/>
-    <path d="M58 140q-12 12-12 26q0 20 54 20t54-20q0-14-12-26"/>
-    <path d="M80 140l40-4l4 38l-40 4zM88 150l26-3M89 158l26-3M90 166l16-2"/>
-    <circle cx="78" cy="160" r="9"/>
-    <circle cx="125" cy="155" r="9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150" role="img" aria-label="An otter, drawn in one loose line, with a sheet of paper">
+  <!-- The library otter: one loose line from chin to tail, blue eyes, a sheet of paper under its chin. -->
+  <g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34 124C20 104 18 70 44 52C62 40 88 38 104 50C106 42 116 40 119 48C121 54 116 58 112 58C146 54 186 66 208 92C216 101 226 103 234 92"/>
+    <path d="M38 98l-18-3M39 104l-17 5"/>
+    <path d="M50 106q6 5 12 1"/>
+    <path d="M58 118l34-6l4 22l-34 6zM66 124l22-4M67 131l14-2"/>
   </g>
-  <g fill="#fff">
-    <circle cx="74" cy="80" r="7"/>
-    <circle cx="126" cy="80" r="7"/>
-    <ellipse cx="100" cy="102" rx="10" ry="6.5"/>
-  </g>
+  <circle cx="56" cy="76" r="5.5" fill="none" stroke="#fff" stroke-width="2.2"/>
+  <circle cx="78" cy="72" r="5.5" fill="none" stroke="#fff" stroke-width="2.2"/>
+  <circle cx="57" cy="77" r="2.6" fill="#569cd6"/>
+  <circle cx="79" cy="73" r="2.6" fill="#569cd6"/>
+  <ellipse cx="46" cy="94" rx="5" ry="3.5" fill="#fff"/>
 </svg>
