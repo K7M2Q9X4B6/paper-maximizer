@@ -1,13 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 170" role="img" aria-label="An otter floating on its back, holding a sheet of paper">
-  <!-- The library otter: floating on its back with a sheet of paper on its belly. Outline only, white on dark. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" role="img" aria-label="An otter, drawn in one loose line">
   <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M60 30C38 30 26 46 28 64C30 80 42 90 58 94C72 118 106 134 142 132C164 131 180 122 190 112C202 118 216 110 224 96"/>
-    <path d="M60 30C80 30 96 44 96 62C96 70 93 77 88 82C112 96 150 104 186 104C192 104 196 108 190 112"/>
-    <path d="M27 58q-6-1-6-8q6-2 9 3M94 54q5-4 9 0q-2 6-8 7"/>
-    <path d="M110 84l24-10l9 21l-24 10z"/>
-    <path d="M106 96q-8-4-4-12M146 88q8 0 6-10"/>
-    <path d="M54 74q7 5 14 0"/>
-    <path d="M20 142q30-12 60-2t60 0t60-4t30 2M50 158q30-8 60-2t60-2"/>
+    <path d="M44 150C26 124 24 82 52 58C80 34 136 30 176 44C196 51 208 62 214 76"/>
+    <path d="M96 66C108 86 106 116 86 130C74 138 58 138 48 132"/>
+    <path d="M64 112q2 9-7 12M64 112q3 8 12 8"/>
+    <path d="M44 106l-20-4M44 113l-19 4M86 104l20-5M87 111l19 1"/>
   </g>
-  <g fill="#fff"><circle cx="48" cy="58" r="4.5"/><circle cx="74" cy="56" r="4.5"/><ellipse cx="61" cy="67" rx="4" ry="3"/></g>
+  <g fill="#fff">
+    <circle cx="59" cy="89" r="3.6"/><circle cx="83" cy="87" r="3.6"/>
+    <path d="M56 104q8-5 16 0q-5 9-8 9t-8-9z"/>
+  </g>
 </svg>
