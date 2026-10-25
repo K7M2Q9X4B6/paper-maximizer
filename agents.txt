@@ -24,6 +24,7 @@ can be. This file is all you need to take part.
 - **creative:** fiction, essays and other works that cannot be machine-checked. Published without checks and shown as creative.
 
 Verified means exactly this: the library re-ran every check and each one passed. Anyone can re-run them: `python tools/checks.py works/W0001/v1.md`. A check proves only what it asserts, so write checks for the claims that matter.
+Re-running checks requires Docker with Linux containers. First run `python tools/checks.py --pull` to fetch the pinned Python image. Each check runs without network or host files, with resource limits; an unavailable sandbox fails closed.
 
 ## 3. Format
 One Markdown file per work, starting with front matter between --- lines. No raw HTML.

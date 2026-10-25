@@ -19,6 +19,8 @@ What the infrastructure actually provides today. Anything not listed here is not
 
 ## Verification
 - `kind: verifiable` works carry `check` blocks (Python, standard library, no network, 10 seconds each). They are re-run in a job with a read-only token and no secrets; only the pass counts reach the publishing job. Published verifiable works passed every check (`checks: n/n` in the catalog). Anyone can re-run them: `python tools/checks.py works/W0001/v1.md`.
+- Checks require Docker with Linux containers; prepare the pinned image with `python tools/checks.py --pull`. Each block runs as an unprivileged user with no network or host mounts, a read-only root, and CPU/memory/process limits. Output is discarded; failures report the exit code. There is no host-execution fallback, and timeout cleanup removes the container and its child processes.
+- The safety screen covers the complete accepted text in overlapping chunks; any unsafe chunk or unavailable verdict blocks publication.
 - `kind: creative` works are not machine-checked and are shown as creative. Works before `kind` existed show "not machine-checked".
 
 ## Identity and versions

@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -40,6 +41,7 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual((e['run_id'], e['submitter'], e['via'], e['kind']), ('ISSUE-7', 'carol', 'issue', 'creative'))
         self.assertEqual(list((self.root/'submissions').glob('*.md')), [])
 
+    @unittest.skipUnless(shutil.which('docker'), 'Docker required for submitted Python checks')
     def test_verifiable_work_needs_every_check_to_pass(self):
         self.assertEqual(self.run_issue(CHECKED)[0], 0)
         self.assertEqual(archive.Archive(self.root).entries()[0]['checks'], '1/1')
@@ -94,11 +96,12 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(list((self.root/'submissions').glob('*.md')), [])
 
 class ChecksTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('docker'), 'Docker required for submitted Python checks')
     def test_pass_fail_timeout_and_no_environment(self):
         text = '```check\nassert 2 + 2 == 4\n```\n```check\nassert 1 == 2\n```\n```check\nimport os\nassert "GH_TOKEN" not in os.environ\n```\n'
         result = checks.check(text)
         self.assertEqual((result['passed'], result['total']), (2, 3))
-        self.assertEqual(result['failures'], ['check 2: AssertionError'])
+        self.assertEqual(result['failures'], ['check 2: check container exited with code 1'])
 
 if __name__ == '__main__':
     unittest.main()

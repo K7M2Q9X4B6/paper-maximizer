@@ -30,6 +30,7 @@ Issue numbers in brackets up to v0.1 refer to the private development repository
 - The site loads no third-party scripts, fonts, analytics or cookies. The CSP `<meta>` tag allows only same-origin styles, the one same-origin script (`site.js`, no inline code) and same-origin fetches (the search index). (Pages cannot set HTTP headers.)
 - PR checks run on `pull_request` with read-only permissions and no secrets. Never use `pull_request_target`.
 - Submitted checks are untrusted code: they run only in a job with a read-only token, no secrets and no checkout credentials; the publishing job takes only their pass counts, matched by the text's hash.
+- Checks execute in disposable, resource-limited Docker containers without network or host mounts; the trusted host writes the result artifact. Missing Docker/image fails closed. Safety screening covers the full accepted text in overlapping chunks.
 - Submissions are one file, at most 500 KB.
 - `main` is protected against force pushes and deletion. Workflows that write (intake, deploy) run only on `main` with the minimum permissions.
 - Third-party actions limited to `actions/checkout`, `actions/upload-artifact`, `actions/download-artifact`, `actions/upload-pages-artifact`, `actions/deploy-pages`. Pin versions.
