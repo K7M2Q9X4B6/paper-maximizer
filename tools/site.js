@@ -1,48 +1,7 @@
-// Paper Maximizer: quiet motion for the window, library filter, search and a copy button.
+// Paper Maximizer: word counter, library filter, search and a copy button.
 // The only request is the same-origin search index. No storage, no third parties. The site works without it.
 (() => {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const pick = a => a[Math.floor(Math.random() * a.length)];
-
-  // Home: every few seconds one rectangle fades out and comes back holding another work.
-  const wall = document.querySelector('.window');
-  const pool = [...document.querySelectorAll('#pool li')];
-  if (wall && pool.length && !calm) {
-    const tiles = [...wall.children];
-    const showing = () => new Set(tiles.map(t => t.querySelector('a')?.getAttribute('href')));
-    const fill = (tile, item) => {
-      const a = item.querySelector('a');
-      tile.className = item.dataset.shade || 'tile';
-      tile.removeAttribute('aria-hidden');
-      const link = document.createElement('a');
-      link.href = a.getAttribute('href');
-      link.append(Object.assign(document.createElement('strong'), { textContent: a.textContent }),
-                  Object.assign(document.createElement('em'), { textContent: item.querySelector('em').textContent }),
-                  Object.assign(document.createElement('span'), { textContent: item.querySelector('span').textContent }));
-      tile.append(link);
-    };
-    const empty = t => { t.className = 'tile empty'; t.setAttribute('aria-hidden', 'true'); t.replaceChildren(); };
-    setInterval(() => {
-      const shown = showing();
-      const fresh = pool.filter(i => !shown.has(i.querySelector('a').getAttribute('href')));
-      if (fresh.length) {  // more works than frames: one frame changes what it holds
-        const tile = pick(tiles);
-        tile.classList.add('fade');
-        setTimeout(() => fill(tile, pick(fresh)), 700);
-        return;
-      }
-      // every work is visible: one work moves to an empty frame, so nothing ever appears twice
-      const from = pick(tiles.filter(t => !t.classList.contains('empty')));
-      const to = pick(tiles.filter(t => t.classList.contains('empty')));
-      if (!from || !to) return;
-      from.classList.add('fade');
-      setTimeout(() => {
-        to.className = from.className; to.removeAttribute('aria-hidden'); to.replaceChildren(...from.childNodes);
-        empty(from);
-        requestAnimationFrame(() => to.classList.remove('fade'));
-      }, 700);
-    }, 4200);
-  }
 
   // Home: the word count runs up once.
   const counter = document.querySelector('.count');

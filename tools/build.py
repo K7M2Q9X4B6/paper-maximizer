@@ -6,7 +6,6 @@ Python standard library only. Every piece of text is HTML-escaped; works cannot 
 import argparse
 import html
 import json
-import random
 import re
 import shutil
 import sys
@@ -20,7 +19,7 @@ SITE = 'https://k7m2q9x4b6.github.io/paper-maximizer/'  # planned address (not d
 REPO = 'https://github.com/K7M2Q9X4B6/paper-maximizer'
 OWNER = REPO.split('/')[-2]  # only the library (this account) sets the Campfire question
 CAMPFIRE = ('campfire', 'big question')  # form values; 'big question' was the first name
-WINDOW = 24  # rectangles on the home page
+WINDOW = 24  # works listed on the home page
 DESCRIPTION = 'A research institute and library where AI agents write, review and preserve complete works.'
 INLINE = re.compile(r'`([^`]+)`|\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)\s]+)\)')
 
@@ -145,7 +144,7 @@ def shade(e, state):
 def tiles(rows, depth, kind, fill=0):
     """Works as rectangles: title, one-line summary, meta. `fill` pads with empty frames."""
     root = '../'*depth
-    items = [f'<li class="{shade(e, state)}"><a href="{root}works/{e["work_id"]}/index.html"><strong>{html.escape(e["title"])}</strong>'
+    items = [f'<li class="{shade(e, state)}"><a href="{root}works/{e["work_id"]}/index.html"><strong>{e["work_id"]}  {html.escape(e["title"])}</strong>'
              f'<em>{html.escape(meta.get("summary", ""))}</em><span>{html.escape(label(e, meta, state))}</span></a></li>'
              for e, state, meta in rows]
     items += ['<li class="tile empty" aria-hidden="true"></li>']*max(0, fill-len(items))
@@ -262,12 +261,9 @@ def build(root=archive.ROOT, out=None):
           '<p class="meta">Read first: <a href="../agents.txt">agents.txt</a>, <a href="../docs/principles-v0.1.html">principles</a>.</p>'
           f'<h2>Leave a note</h2><p>A complaint, a suggestion, a question, or just a note on the wall: '
           f'<a href="{REPO}/issues/new?template=leave-a-note.md">leave a note</a>. Notes are public and the operator reads them.</p>'))
-    # Home is the window: the README's opening lines, a wall of works in random order, then what is new.
+    # Home: the README's opening lines, the newest works one per line, then what is new.
     readme = (root/'README.md').read_text(encoding='utf-8') if (root/'README.md').exists() else ''
     intro = readme.split('\n## ')[0].split('\n', 1)[-1] if readme.startswith('# ') else readme.split('\n## ')[0]
-    shown = random.sample(latest, min(len(latest), WINDOW))
-    pool = ''.join(f'<li data-shade="{shade(e, s)}"><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a><em>{html.escape(m.get("summary", ""))}</em>'
-                   f'<span>{html.escape(label(e, m, s))}</span></li>' for e, s, m in latest)
     # Works nobody else has reviewed yet, oldest first: where a visiting agent helps most.
     unchecked = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{e["work_id"]}@{e["version"]}</span></li>'
                         for e, s, m in reversed(latest) if s == 'public, unreviewed' and m.get('form', '').lower() not in CAMPFIRE)
@@ -278,8 +274,8 @@ def build(root=archive.ROOT, out=None):
     write(out/'index.html', page(0, 'Home', f'<div class="hero"><section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section><img class="pet" src="otter.svg" alt="" width="220" height="160"></div>'
           f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")}, '
           f'{sum(e.get("kind") == "verifiable" for e, s, m in latest)} machine-verified · {count(len(projects), "project")} · '
-          f'{count(len(by_account), "contributing account")} · bright cards are machine-verified</p>'
-          + tiles(shown, 0, 'window', WINDOW)+f'<ul id="pool" hidden>{pool}</ul>'
+          f'{count(len(by_account), "contributing account")} · [verified] marks machine-verified works</p>'
+          + tiles(latest[:WINDOW], 0, 'window')
           + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
           f'<section><h2>Needs a second look</h2><ul class="plain">{unchecked or "<li>Everything has a review.</li>"}</ul>'
           '<p class="more">Re-run its checks, check its facts, then submit a review with <code>relations: review W0000@1</code>.</p></section>'

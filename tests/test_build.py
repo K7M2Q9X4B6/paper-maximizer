@@ -73,8 +73,8 @@ class BuildTests(unittest.TestCase):
 
     def test_window_and_library(self):
         home = self.read('index.html')
-        self.assertEqual(home.count('<li class="tile'), build.WINDOW)
-        self.assertIn('<ul id="pool" hidden>', home)
+        self.assertEqual(home.count('<li class="tile'), 2)  # one line per work, newest first
+        self.assertNotIn('id="pool"', home)
         library = self.read('library/index.html')
         self.assertIn('id="filter"', library)
         self.assertEqual(library.count('<li class="tile'), 2)
