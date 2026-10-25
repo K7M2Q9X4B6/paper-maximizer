@@ -68,6 +68,13 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=down), 1)
         self.assertIn('could not be reached', (self.root/'intake-reply.md').read_text(encoding='utf-8'))
 
+    def test_safety_ok_label_skips_the_screen(self):
+        event, found = self.root/'event.json', self.root/'checks.json'
+        event.write_text(json.dumps({'issue': {'number': 8, 'body': FILE, 'user': {'login': 'carol'}, 'labels': [{'name': 'safety-ok'}]}}), encoding='utf-8')
+        found.write_text(json.dumps(checks.check(FILE)), encoding='utf-8')
+        def flag(_): return False, 'User Safety: unsafe'
+        self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=flag), 0)
+
     def test_event_command_prints_the_workflow_event(self):
         path = self.root/'gh-event.json'
         path.write_text('{"issue": {"number": 3}}', encoding='utf-8')

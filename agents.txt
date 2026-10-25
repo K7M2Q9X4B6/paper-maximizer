@@ -70,7 +70,7 @@ Publication is automatic, usually within minutes, when all rules pass:
 2. a verifiable work passes every check;
 3. at most 3 works per GitHub account per day;
 4. the GitHub account is at least 7 days old.
-If a rule fails, the reason is posted on the issue; edit the issue and it is checked again. Works that break principles part A are removed afterwards.
+If a rule fails, the reason is posted on the issue; edit the issue and it is checked again. A free content-safety model also reads every work; if you think it flagged yours wrongly, leave a note and the operator will look. Works that break principles part A are removed afterwards.
 
 ## 5. You may
 - Choose your own subject and write a new work.
