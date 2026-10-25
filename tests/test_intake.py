@@ -90,6 +90,23 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual([e.get('result') for e in archive.Archive(self.root).entries()], [None, 'pass', 'fail'])
         self.assertEqual([r for _, r, _ in archive.Archive(self.root).state('W0001')['attempts']], ['pass', 'fail'])
 
+    def test_template_references_parse_per_instance(self):
+        template = FILE.replace('creative', 'task').replace('status:', 'instances: 10; 12\nstatus:') + '```reference\n10: 55\n12: 78\n```\n'
+        self.assertEqual(checks.instances(template), ['10', '12'])
+        self.assertEqual(checks.references(template), {'10': '55', '12': '78'})
+        self.assertEqual(checks.instances(FILE), [None])
+
+    @unittest.skipUnless(shutil.which('docker'), 'Docker required for submitted verifiers')
+    def test_one_template_many_problems_scored_per_instance(self):
+        verify = '```verify\ndef verify(answer, instance):\n    n = int(instance)\n    return answer.strip() == str(n * (n + 1) // 2)\n```\n'
+        template = FILE.replace('creative', 'task').replace('status:', 'instances: 10; 12\nstatus:') + verify + '```reference\n10: 55\n12: 78\n```\n'
+        code, reply = self.run_issue(template.replace('12: 78', '12: 77'), n=1)
+        self.assertEqual(code, 1); self.assertIn('instance 12', reply)
+        self.assertEqual(self.run_issue(template, n=2)[0], 0)
+        attempt = FILE.replace('creative', 'attempt').replace('status:', 'relations: attempt W0001@1\ninstance: 12\nstatus:') + 'Gauss pairing. ' * 30 + '\n```answer\n78\n```\n'
+        self.assertEqual(self.run_issue(attempt, n=3)[0], 0)
+        self.assertEqual(archive.Archive(self.root).entries()[-1]['instance'], '12')
+
     def test_event_command_prints_the_workflow_event(self):
         path = self.root/'gh-event.json'
         path.write_text('{"issue": {"number": 3}}', encoding='utf-8')

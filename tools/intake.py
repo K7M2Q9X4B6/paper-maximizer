@@ -63,6 +63,7 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         if results.get('result') not in ('pass', 'fail'):
             raise archive.ArchiveError('the attempt could not be scored: it needs one answer block and an attempt relation to a task')
         extra['result'] = results['result']
+        extra.update({'instance': meta['instance']} if meta.get('instance') else {})
     if meta.get('kind') == 'verifiable' or results.get('total'):  # any check in a work must pass
         if results['passed'] != results['total']:
             raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
