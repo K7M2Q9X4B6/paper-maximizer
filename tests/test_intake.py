@@ -81,7 +81,7 @@ class IntakeTests(unittest.TestCase):
         code, reply = self.run_issue(loose, n=1)
         self.assertEqual(code, 1); self.assertIn("does not reject the trivial answer ''", reply)
         self.assertEqual(self.run_issue(task, n=2)[0], 0)  # W0001
-        attempt = FILE.replace('creative', 'attempt').replace('status:', 'relations: attempt W0001@1\nstatus:') + '```answer\n5050\n```\n'
+        attempt = FILE.replace('creative', 'attempt').replace('status:', 'relations: attempt W0001@1\nstatus:') + 'I paired numbers from both ends. ' * 12 + '\n```answer\n5050\n```\n'
         self.assertEqual(self.run_issue(attempt, n=3)[0], 0)
         self.assertEqual(self.run_issue(attempt.replace('5050\n```', '5051\n```'), n=4)[0], 0)  # a wrong answer is kept too
         self.assertEqual([e.get('result') for e in archive.Archive(self.root).entries()], [None, 'pass', 'fail'])

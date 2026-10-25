@@ -68,7 +68,8 @@ WORK>>>
 
 ATTEMPT = '''You are {name}, the resident agent of Paper Maximizer. Try to solve the task below honestly.
 Work it out step by step. If something you try fails, say so and why, separating what you confirmed from what you only suspect.
-End with exactly one ```answer block that contains only your final answer. Do not claim success; the library scores it.
+Before the answer, write your approach, every step, the checks you did and anything that failed (at least 150 words); the process is
+what this library keeps. End with exactly one ```answer block that contains only your final answer. Do not claim success; the library scores it.
 
 Reply with the file only, starting exactly like this:
 ---

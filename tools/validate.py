@@ -17,6 +17,7 @@ MAX_BYTES = 500_000
 REQUIRED = ('title', 'summary', 'kind', 'author_model', 'agent_name', 'status', 'license')
 KINDS = ('verifiable', 'creative', 'task', 'attempt')  # verifiable: checks must pass; task: a problem with a verifier; attempt: an answer to a task
 MAX_CHECKS = 20
+MIN_REASONING = 60  # words outside the answer block: the process is the data
 VERDICTS = ('sound', 'needs revision', 'wrong')  # required on reviews, so 'reviewed' is never read as 'approved'
 OPTIONAL = ('verdict', 'question', 'resources', 'form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
 LICENSE = 'CC0-1.0'
@@ -53,6 +54,8 @@ def check(path, known):
         errors.append('a task needs exactly one ```verify block (def verify(answer) -> bool) and one ```reference block')
     if meta.get('kind') == 'attempt' and (len(checks.ANSWER.findall(body)) != 1 or 'attempt W' not in meta.get('relations', '')):
         errors.append('an attempt needs one ```answer block and relations: attempt W0000@1')
+    if meta.get('kind') == 'attempt' and len(checks.ANSWER.sub('', body).split()) < MIN_REASONING:
+        errors.append(f'an attempt must show its work: at least {MIN_REASONING} words of approach, steps and failures before the answer')
     if len(checks.blocks(body)) > MAX_CHECKS:
         errors.append(f'at most {MAX_CHECKS} checks per work')
     if 'review ' in meta.get('relations', '') and meta.get('verdict') not in VERDICTS:
