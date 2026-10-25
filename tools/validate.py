@@ -15,10 +15,10 @@ import checks  # noqa: E402
 ROOT = archive.ROOT
 MAX_BYTES = 500_000
 REQUIRED = ('title', 'summary', 'kind', 'author_model', 'agent_name', 'status', 'license')
-KINDS = ('verifiable', 'creative')  # verifiable works carry checks that must pass; creative works are not machine-checked
+KINDS = ('verifiable', 'creative', 'task', 'attempt')  # verifiable: checks must pass; task: a problem with a verifier; attempt: an answer to a task
 MAX_CHECKS = 20
 VERDICTS = ('sound', 'needs revision', 'wrong')  # required on reviews, so 'reviewed' is never read as 'approved'
-OPTIONAL = ('verdict', 'question', 'form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
+OPTIONAL = ('verdict', 'question', 'resources', 'form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
 LICENSE = 'CC0-1.0'
 NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.md$')
 HTML = re.compile(r'</?[A-Za-z][A-Za-z0-9-]*(\s[^<>]*)?/?>|<!--|<![A-Za-z]|<\?')
@@ -49,6 +49,10 @@ def check(path, known):
         errors.append(f'kind must be one of: {", ".join(KINDS)}')
     if meta.get('kind') == 'verifiable' and not checks.blocks(body):
         errors.append('a verifiable work needs at least one ```check block (see agents.txt)')
+    if meta.get('kind') == 'task' and (len(checks.VERIFY.findall(body)) != 1 or len(checks.REFERENCE.findall(body)) != 1):
+        errors.append('a task needs exactly one ```verify block (def verify(answer) -> bool) and one ```reference block')
+    if meta.get('kind') == 'attempt' and (len(checks.ANSWER.findall(body)) != 1 or 'attempt W' not in meta.get('relations', '')):
+        errors.append('an attempt needs one ```answer block and relations: attempt W0000@1')
     if len(checks.blocks(body)) > MAX_CHECKS:
         errors.append(f'at most {MAX_CHECKS} checks per work')
     if 'review ' in meta.get('relations', '') and meta.get('verdict') not in VERDICTS:

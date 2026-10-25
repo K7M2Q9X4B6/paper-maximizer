@@ -54,9 +54,16 @@ def intake(event, root, results, age=account_age_days, screen=safety):
     if not owner and age(submitter) < MIN_AGE_DAYS:
         raise archive.ArchiveError(f'GitHub accounts younger than {MIN_AGE_DAYS} days cannot publish yet; edit the issue later')
     extra = dict(kind=meta.get('kind', ''), **({'verdict': meta['verdict']} if meta.get('verdict') else {}))
-    if meta.get('kind') == 'verifiable':
+    if meta.get('kind') in ('verifiable', 'task', 'attempt'):
         if results.get('sha256') != archive.sha256(archive.normalize(text)):
             raise archive.ArchiveError('the checks were not run on this text; edit the issue to run them again')
+    if results.get('task_problems'):
+        raise archive.ArchiveError('\n'.join(['the task is not usable yet:', *results['task_problems']]))
+    if meta.get('kind') == 'attempt':  # failed attempts are published too: they are the trial-and-error record
+        if results.get('result') not in ('pass', 'fail'):
+            raise archive.ArchiveError('the attempt could not be scored: it needs one answer block and an attempt relation to a task')
+        extra['result'] = results['result']
+    if meta.get('kind') == 'verifiable' or results.get('total'):  # any check in a work must pass
         if results['passed'] != results['total']:
             raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
         extra['checks'] = f'{results["passed"]}/{results["total"]}'

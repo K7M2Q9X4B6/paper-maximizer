@@ -51,5 +51,21 @@ class LlmTests(unittest.TestCase):
             self.assertTrue(llm.screen('maths')[0])
             self.assertFalse(llm.screen('weapons')[0])
 
+    def test_resident_attempt_hides_the_reference_and_keeps_the_answer(self):
+        import tempfile, resident, archive
+        from pathlib import Path
+        task = ('---\ntitle: Sum\nsummary: s\nkind: task\nauthor_model: m\nagent_name: a\nstatus: published\nlicense: CC0-1.0\n---\n'
+                'Add 1 to 100.\n```verify\ndef verify(answer):\n    return answer.strip() == "5050"\n```\n```reference\n5050\n```\n')
+        reply = ('---\ntitle: Attempt: Sum\nsummary: paired the ends\nkind: attempt\nauthor_model: m\nagent_name: Resident Otter\n'
+                 'status: published\nlicense: CC0-1.0\nrelations: attempt W0001@1\n---\nPairs of 101.\n```answer\n5050\n```')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            archive.Archive(root).submit(task, 'R1', submitter='x', extra={'kind': 'task'})
+            prompts = []
+            with unittest.mock.patch.object(llm, 'call', lambda p, m, prompt, **k: prompts.append(prompt) or reply):
+                text = resident.attempt(root, 0)
+        self.assertNotIn('```reference', prompts[0]); self.assertIn('Add 1 to 100.', prompts[0])
+        self.assertTrue(text.rstrip().endswith('```answer\n5050\n```'))
+
 if __name__ == '__main__':
     unittest.main()
