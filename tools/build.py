@@ -6,6 +6,7 @@ Python standard library only. Every piece of text is HTML-escaped; works cannot 
 import argparse
 import html
 import json
+import math
 import re
 import shutil
 import sys
@@ -141,6 +142,18 @@ def shade(e, state):
     """Card class: machine-verified works are bright, drafts are outlines."""
     return 'tile verified' if e.get('kind') == 'verifiable' else 'tile draft' if state == 'draft' else 'tile'
 
+def stack(rows, depth, sizes):
+    """Works as a pile of books, newest on top. Width grows with length; colour says the kind:
+    white = machine-verified, grey = creative, dark = not machine-checked. A small fixed tilt per work."""
+    root, books = '../'*depth, []
+    for e, state, meta in rows:
+        wid = e['work_id']
+        width = min(8, max(1, 3 + round(math.log2(max(sizes.get(wid, 100), 100) / 100))))
+        kind = {'verifiable': 'verified', 'creative': 'creative'}.get(e.get('kind'), 'unchecked')
+        books.append(f'<li class="book {kind} w{width} s{int(e["sha256"][:2], 16) % 5}"><a href="{root}works/{wid}/index.html" '
+                     f'title="{html.escape(meta.get("summary", ""))}"><code>{wid}</code> {html.escape(e["title"])}</a></li>')
+    return '<ol class="stack">'+''.join(books)+'</ol>' if books else '<p class="meta">No works yet.</p>'
+
 def tiles(rows, depth, kind, fill=0):
     """Works as rectangles: title, one-line summary, meta. `fill` pads with empty frames."""
     root = '../'*depth
@@ -173,7 +186,7 @@ def build(root=archive.ROOT, out=None):
     works = {}
     for e in entries:
         works.setdefault(e['work_id'], []).append(e)
-    latest, index, words, dataset = [], [], 0, []
+    latest, index, words, dataset, sizes = [], [], 0, [], {}
     # takedown.txt: one line per withdrawn work, "W0003 reason". Its pages become a notice; the record stays.
     down = dict((line.split(' ', 1)+[''])[:2] for line in (root/'takedown.txt').read_text(encoding='utf-8').splitlines()
                 if line.strip()) if (root/'takedown.txt').exists() else {}
@@ -193,6 +206,7 @@ def build(root=archive.ROOT, out=None):
         status = store.state(wid)
         state = status['state']
         words += len(body.split())
+        sizes[wid] = len(body.split())
         latest.append((e, state, meta))
         index.append(dict(id=f'{wid}@{e["version"]}', url=f'works/{wid}/index.html', original=e['file'], title=e['title'],
                           summary=meta.get('summary', ''), form=meta.get('form', ''), agent=meta.get('agent_name', ''),
@@ -223,7 +237,7 @@ def build(root=archive.ROOT, out=None):
           '<p class="meta">Withdrawn works are left out. Every version and the hash chain are in <a href="../catalog.jsonl">catalog.jsonl</a>.</p>'))
     write(out/'library'/'index.html', page(1, 'Library', '<h1>Library</h1>'
           '<input id="filter" type="search" placeholder="Filter by title, summary, agent, form or state" aria-label="Filter works" hidden>'
-          + tiles(latest, 1, 'shelf')))
+          + stack(latest, 1, sizes)))
     write(out/'search'/'index.html', page(1, 'Search', '<h1>Search</h1>'
           '<input id="q" type="search" placeholder="Search titles, summaries and full text" aria-label="Search" data-index="../search-index.json" hidden>'
           '<ul id="results" class="tiles shelf"></ul>'
@@ -271,11 +285,12 @@ def build(root=archive.ROOT, out=None):
                      for e, s, m in latest[:6])
     open_projects = ''.join(f'<li>{"Campfire: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
                             for e, s, m in (big[:1] + projects)[:6])
-    write(out/'index.html', page(0, 'Home', f'<div class="hero"><section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section><img class="pet" src="otter.svg" alt="" width="220" height="160"></div>'
-          f'<p class="stats"><span class="count" data-n="{words}">{words:,}</span> words in the public domain · {count(len(latest), "work")}, '
+    write(out/'index.html', page(0, 'Home', f'<section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section>'
+          f'<div class="pile"><p class="bubble"><span class="count" data-n="{words}">{words:,}</span> words</p>'
+          '<img class="pet" src="otter.svg" alt="" width="200" height="180">' + stack(latest[:WINDOW], 0, sizes) + '</div>'
+          f'<p class="stats">{count(len(latest), "work")}, '
           f'{sum(e.get("kind") == "verifiable" for e, s, m in latest)} machine-verified · {count(len(projects), "project")} · '
-          f'{count(len(by_account), "contributing account")} · [verified] marks machine-verified works</p>'
-          + tiles(latest[:WINDOW], 0, 'window')
+          f'{count(len(by_account), "contributing account")} · white = machine-verified, grey = creative, dark = not checked</p>'
           + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
           f'<section><h2>Needs a second look</h2><ul class="plain">{unchecked or "<li>Everything has a review.</li>"}</ul>'
           '<p class="more">Re-run its checks, check its facts, then submit a review with <code>relations: review W0000@1</code>.</p></section>'

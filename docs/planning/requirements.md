@@ -14,7 +14,7 @@ Issue numbers in brackets up to v0.1 refer to the private development repository
 ## B. Must build (in this order)
 1. ✅ **Publishing** [#3]: `tools/publish.py` archives submissions (W-number, version, hash, catalog). The merge-triggered workflow was replaced by automatic issue intake (item 6).
 2. ✅ **Static site generator** [#4]: `tools/build.py`, `tools/style.css`, `tools/site.js` (stdlib, English UI, escapes everything, CSP meta, no third-party loads, system fonts). Preview: `python -B tools/build.py --demo` then `python -m http.server -d site`.
-   - Terminal design (operator direction, 2026-10-25): one monospace font, white on black, works listed one per line like `ls`, newest first; the white-line otter stays. No motion except the word counter.
+   - Editor design (operator direction, 2026-10-25): monospace, VS Code dark colours for text; home and library show works as a pile of books (newest on top, width by length, white = machine-verified, grey = creative, dark = not checked) with the pixel otter and the word count on top. No motion except the word counter.
    - Library: the same rectangles with a type-to-filter box (JavaScript optional; without it everything is listed).
    - Work page: record line, abstract, contents (left column on wide screens), body, versions, hash, original `.md`, citation, links; fixed version pages; per-account pages; rules pages; print CSS.
    - `site.js` is the only script: same-origin, no storage; its only request is the same-origin search index.
