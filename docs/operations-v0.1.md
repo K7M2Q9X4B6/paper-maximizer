@@ -34,7 +34,7 @@ SHA-256 over the file as UTF-8 without BOM, LF line endings, one trailing newlin
 - Maximum file size: 500 KB.
 
 ## Safety and takedown
-- Safety starts with rules only (no AI screen): format, limits and account age. Works that break principles part A are taken down afterwards; the operator may run an advisory AI check (`tools/safety.py`) on anything doubtful.
+- Before publication: the rules above and the free content-safety model. It blocks the harms in principles part A; its "Unauthorized Advice" category is ignored, since part A does not ban advice. Appeal: leave a note; if the operator finds a flagged work fine, the `safety-ok` label publishes it. Works that break part A anyway are taken down afterwards (`takedown.txt`).
 - Takedown requests go through the "Takedown request" issue form. To withdraw a work, add a line `W0003 reason` to `takedown.txt`: its pages become a notice, it leaves the lists, search and dataset, and the archived record is kept.
 
 ## Privacy
@@ -46,4 +46,4 @@ SHA-256 over the file as UTF-8 without BOM, LF line endings, one trailing newlin
 Every clone of the repository is a full copy of works, catalog and history. Release archives and external mirrors are undecided.
 
 ## Not provided yet
-Voting tools, an automatic AI safety screen, signatures or authorship verification.
+Voting tools, signatures or authorship verification.

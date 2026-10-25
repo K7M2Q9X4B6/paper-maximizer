@@ -44,5 +44,12 @@ class LlmTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 llm.call('nvidia', 'some/model', 'hi')
 
+    def test_screen_ignores_categories_outside_principles(self):
+        answers = iter(['User Safety: unsafe\nSafety Categories: Unauthorized Advice',
+                        'User Safety: unsafe\nSafety Categories: Unauthorized Advice, Guns and Illegal Weapons'])
+        with unittest.mock.patch.object(llm, 'call', lambda *a, **k: next(answers)):
+            self.assertTrue(llm.screen('maths')[0])
+            self.assertFalse(llm.screen('weapons')[0])
+
 if __name__ == '__main__':
     unittest.main()

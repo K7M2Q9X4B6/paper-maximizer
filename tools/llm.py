@@ -33,6 +33,8 @@ def call(provider, model, prompt, max_tokens=2000, timeout=180):
 
 SAFETY = ('openrouter', 'nvidia/nemotron-3.5-content-safety:free')  # answers "User Safety: safe|unsafe" (+ categories)
 VERDICT = re.compile(r'User Safety:\s*(safe|unsafe)', re.I)
+CATEGORIES = re.compile(r'Safety Categories:\s*(.+)', re.I)
+IGNORED = {'unauthorized advice'}  # not banned by principles part A (it flagged a maths review)
 
 def screen(text, tries=3):
     """(safe, answer) from the free content-safety model, given only the work's text. Fails closed: no verdict raises."""
@@ -40,7 +42,8 @@ def screen(text, tries=3):
         try:
             answer = call(*SAFETY, text[:30000], max_tokens=1000).strip()
             if m := VERDICT.search(answer):
-                return m.group(1).lower() == 'safe', answer
+                flagged = {c.strip().lower() for c in (CATEGORIES.search(answer) or [None, ''])[1].split(',') if c.strip()}
+                return m.group(1).lower() == 'safe' or bool(flagged) and flagged <= IGNORED, answer
             raise ValueError(f'no safety verdict: {answer[:80]!r}')
         except (urllib.error.URLError, ValueError, TimeoutError):
             if attempt == tries-1:

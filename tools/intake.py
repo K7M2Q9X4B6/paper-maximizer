@@ -60,8 +60,9 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         if results['passed'] != results['total']:
             raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
         extra['checks'] = f'{results["passed"]}/{results["total"]}'
-    try:
-        safe, answer = screen(text)
+    labels = {l['name'] for l in issue.get('labels', [])}
+    try:  # safety-ok: the operator looked at a flagged work and found it fine (only collaborators can label)
+        safe, answer = (True, 'reviewed by the operator') if 'safety-ok' in labels else screen(text)
     except Exception:
         raise archive.ArchiveError('the safety screen could not be reached; edit the issue later to try again')
     if not safe:

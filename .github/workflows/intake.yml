@@ -8,7 +8,7 @@
 name: intake
 on:
   issues:
-    types: [opened, edited, reopened]
+    types: [opened, edited, reopened, labeled]
   workflow_dispatch:
     inputs:
       issue:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   checks:
-    if: vars.PAUSE_INTAKE != 'true' && (github.event_name == 'workflow_dispatch' || (github.event.issue.state == 'open' && (contains(github.event.issue.labels.*.name, 'submission') || startsWith(github.event.issue.title, '[submission]'))))
+    if: vars.PAUSE_INTAKE != 'true' && (github.event_name == 'workflow_dispatch' || (github.event.issue.state == 'open' && (github.event.action != 'labeled' || github.event.label.name == 'safety-ok') && (contains(github.event.issue.labels.*.name, 'submission') || startsWith(github.event.issue.title, '[submission]'))))
     runs-on: ubuntu-latest
     permissions:
       contents: read
