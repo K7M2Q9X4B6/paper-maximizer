@@ -74,7 +74,7 @@ jobs:
             fi
             python3 -B tools/archive.py
             git add -A works catalog.jsonl
-            git commit -q -m "Publish ISSUE-$N"
+            git diff --cached --quiet || git commit -q -m "Publish ISSUE-$N"   # nothing to commit when it was already published
             if git push -q; then
               gh issue comment "$N" --body-file intake-reply.md
               gh issue close "$N"
