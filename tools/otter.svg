@@ -1,72 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 22" shape-rendering="crispEdges" role="img" aria-label="A pixel otter in the water, holding a book">
-  <!-- The library otter, in pixels: in the water, holding a book to its mouth. -->
-  <rect x="15" y="0" width="2" height="1" fill="#3a3632"/>
-  <rect x="14" y="1" width="1" height="1" fill="#3a3632"/>
-  <rect x="15" y="1" width="6" height="1" fill="#5c5650"/>
-  <rect x="14" y="2" width="10" height="1" fill="#5c5650"/>
-  <rect x="13" y="3" width="12" height="1" fill="#5c5650"/>
-  <rect x="12" y="4" width="7" height="1" fill="#5c5650"/>
-  <rect x="19" y="4" width="1" height="1" fill="#8a8580"/>
-  <rect x="20" y="4" width="6" height="1" fill="#5c5650"/>
-  <rect x="12" y="5" width="6" height="1" fill="#5c5650"/>
-  <rect x="18" y="5" width="2" height="1" fill="#0e0e0e"/>
-  <rect x="20" y="5" width="8" height="1" fill="#5c5650"/>
-  <rect x="12" y="6" width="17" height="1" fill="#5c5650"/>
-  <rect x="12" y="7" width="14" height="1" fill="#5c5650"/>
-  <rect x="26" y="7" width="2" height="1" fill="#0e0e0e"/>
-  <rect x="28" y="7" width="1" height="1" fill="#5c5650"/>
-  <rect x="29" y="7" width="1" height="1" fill="#8a8580"/>
-  <rect x="12" y="8" width="2" height="1" fill="#e8e0d0"/>
-  <rect x="14" y="8" width="15" height="1" fill="#5c5650"/>
-  <rect x="29" y="8" width="1" height="1" fill="#8a8580"/>
-  <rect x="11" y="9" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="9" width="3" height="1" fill="#5c5650"/>
-  <rect x="18" y="9" width="1" height="1" fill="#b0b0b0"/>
-  <rect x="19" y="9" width="9" height="1" fill="#5c5650"/>
-  <rect x="10" y="10" width="1" height="1" fill="#5c5650"/>
-  <rect x="11" y="10" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="10" width="1" height="1" fill="#8c8c8c"/>
-  <rect x="16" y="10" width="8" height="1" fill="#f2f2f2"/>
-  <rect x="24" y="10" width="3" height="1" fill="#5c5650"/>
-  <rect x="9" y="11" width="2" height="1" fill="#5c5650"/>
-  <rect x="11" y="11" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="11" width="1" height="1" fill="#8c8c8c"/>
-  <rect x="16" y="11" width="1" height="1" fill="#f2f2f2"/>
-  <rect x="18" y="11" width="5" height="1" fill="#8c8c8c"/>
-  <rect x="23" y="11" width="1" height="1" fill="#f2f2f2"/>
-  <rect x="24" y="11" width="1" height="1" fill="#5c5650"/>
-  <rect x="8" y="12" width="3" height="1" fill="#5c5650"/>
-  <rect x="11" y="12" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="12" width="1" height="1" fill="#8c8c8c"/>
-  <rect x="16" y="12" width="8" height="1" fill="#f2f2f2"/>
-  <rect x="24" y="12" width="2" height="1" fill="#3a3632"/>
-  <rect x="7" y="13" width="4" height="1" fill="#5c5650"/>
-  <rect x="11" y="13" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="13" width="1" height="1" fill="#8c8c8c"/>
-  <rect x="16" y="13" width="1" height="1" fill="#f2f2f2"/>
-  <rect x="18" y="13" width="5" height="1" fill="#8c8c8c"/>
-  <rect x="23" y="13" width="1" height="1" fill="#f2f2f2"/>
-  <rect x="24" y="13" width="2" height="1" fill="#3a3632"/>
-  <rect x="6" y="14" width="5" height="1" fill="#5c5650"/>
-  <rect x="11" y="14" width="4" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="14" width="1" height="1" fill="#8c8c8c"/>
-  <rect x="16" y="14" width="8" height="1" fill="#f2f2f2"/>
-  <rect x="5" y="15" width="7" height="1" fill="#5c5650"/>
-  <rect x="12" y="15" width="3" height="1" fill="#e8e0d0"/>
-  <rect x="15" y="15" width="3" height="1" fill="#3a3632"/>
-  <rect x="19" y="15" width="2" height="1" fill="#3a3632"/>
-  <rect x="4" y="16" width="9" height="1" fill="#5c5650"/>
-  <rect x="13" y="16" width="3" height="1" fill="#e8e0d0"/>
-  <rect x="16" y="16" width="2" height="1" fill="#3a3632"/>
-  <rect x="3" y="17" width="14" height="1" fill="#5c5650"/>
-  <rect x="2" y="18" width="15" height="1" fill="#5c5650"/>
-  <rect x="0" y="19" width="30" height="1" fill="#4a6a8a"/>
-  <rect x="1" y="20" width="3" height="1" fill="#4a6a8a"/>
-  <rect x="7" y="20" width="4" height="1" fill="#4a6a8a"/>
-  <rect x="15" y="20" width="3" height="1" fill="#4a6a8a"/>
-  <rect x="22" y="20" width="4" height="1" fill="#4a6a8a"/>
-  <rect x="28" y="20" width="1" height="1" fill="#4a6a8a"/>
-  <rect x="4" y="21" width="2" height="1" fill="#4a6a8a"/>
-  <rect x="12" y="21" width="3" height="1" fill="#4a6a8a"/>
-  <rect x="19" y="21" width="2" height="1" fill="#4a6a8a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 170" role="img" aria-label="An otter floating on its back, holding a sheet of paper">
+  <!-- The library otter: floating on its back with a sheet of paper on its belly. Outline only, white on dark. -->
+  <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 30C38 30 26 46 28 64C30 80 42 90 58 94C72 118 106 134 142 132C164 131 180 122 190 112C202 118 216 110 224 96"/>
+    <path d="M60 30C80 30 96 44 96 62C96 70 93 77 88 82C112 96 150 104 186 104C192 104 196 108 190 112"/>
+    <path d="M27 58q-6-1-6-8q6-2 9 3M94 54q5-4 9 0q-2 6-8 7"/>
+    <path d="M110 84l24-10l9 21l-24 10z"/>
+    <path d="M106 96q-8-4-4-12M146 88q8 0 6-10"/>
+    <path d="M54 74q7 5 14 0"/>
+    <path d="M20 142q30-12 60-2t60 0t60-4t30 2M50 158q30-8 60-2t60-2"/>
+  </g>
+  <g fill="#fff"><circle cx="48" cy="58" r="4.5"/><circle cx="74" cy="56" r="4.5"/><ellipse cx="61" cy="67" rx="4" ry="3"/></g>
 </svg>
