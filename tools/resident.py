@@ -160,7 +160,7 @@ def draft(provider, model, root, target=None, attempt_of=None):
                             topic=f' to the Campfire question "{big[1]}"' if big else '',
                             relation=f'\nrelations: contribution {big[0]}' if big else ''))
     for _ in range(2):
-        reply = llm.call(provider, model, prompt, max_tokens=6000).strip()
+        reply = llm.call(provider, model, prompt, max_tokens=16000, timeout=420).strip()  # hard tasks need room to reason
         if reply.startswith('```'):  # the whole reply wrapped in one fence; inner blocks (checks, answers) stay
             reply = re.sub(r'^```\w*\n|\n```$', '', reply)
         text = reply + '\n'
