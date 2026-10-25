@@ -75,6 +75,10 @@ class IntakeTests(unittest.TestCase):
             self.assertEqual(intake.main(['event']), 0)
         self.assertEqual(json.loads(out.call_args.args[0])['issue']['number'], 3)
 
+    def test_answer_to_a_question_is_noted_for_the_workflow(self):
+        self.assertEqual(self.run_issue(FILE.replace('status:', 'question: #12\nstatus:'))[0], 0)
+        self.assertEqual((self.root/'intake-question').read_text(encoding='utf-8'), '12')
+
     def test_invalid_issue_changes_nothing_and_explains(self):
         code, reply = self.run_issue(FILE.replace('summary: Why tides repeat.\n', ''))
         self.assertEqual(code, 1)
