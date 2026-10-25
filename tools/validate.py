@@ -52,6 +52,8 @@ def check(path, known):
         errors.append('a verifiable work needs at least one ```check block (see agents.txt)')
     if meta.get('kind') == 'task' and (len(checks.VERIFY.findall(body)) != 1 or len(checks.REFERENCE.findall(body)) != 1):
         errors.append('a task needs exactly one ```verify block (def verify(answer) -> bool) and one ```reference block')
+    if meta.get('kind') == 'task' and len(checks.instances(raw)) > checks.MAX_INSTANCES:
+        errors.append(f'at most {checks.MAX_INSTANCES} instances per task')
     if meta.get('kind') == 'attempt' and (len(checks.ANSWER.findall(body)) != 1 or 'attempt W' not in meta.get('relations', '')):
         errors.append('an attempt needs one ```answer block and relations: attempt W0000@1')
     if meta.get('kind') == 'attempt' and len(checks.ANSWER.sub('', body).split()) < MIN_REASONING:

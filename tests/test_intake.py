@@ -72,10 +72,26 @@ class IntakeTests(unittest.TestCase):
 
     def test_safety_ok_label_skips_the_screen(self):
         event, found = self.root/'event.json', self.root/'checks.json'
-        event.write_text(json.dumps({'issue': {'number': 8, 'body': FILE, 'user': {'login': 'carol'}, 'labels': [{'name': 'safety-ok'}]}}), encoding='utf-8')
+        event.write_text(json.dumps({'action': 'labeled', 'label': {'name': 'safety-ok'}, 'issue': {'number': 8, 'body': FILE, 'user': {'login': 'carol'}, 'labels': [{'name': 'safety-ok'}]}}), encoding='utf-8')
         found.write_text(json.dumps(checks.check(FILE)), encoding='utf-8')
         def flag(_): return False, 'User Safety: unsafe'
         self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=flag), 0)
+
+    def test_edited_text_does_not_inherit_an_old_safety_approval(self):
+        event = {'action': 'edited', 'issue': {'number': 9, 'body': FILE, 'user': {'login': 'carol'}, 'labels': [{'name': 'safety-ok'}]}}
+        screen = mock.Mock(return_value=(False, 'flagged'))
+        with self.assertRaises(archive.ArchiveError):
+            intake.intake(event, self.root, checks.check(FILE), age=lambda _: 30, screen=screen)
+        screen.assert_called_once()
+        self.assertEqual(archive.Archive(self.root).entries(), [])
+
+    def test_preflight_failure_cannot_reach_the_safety_service_or_publisher(self):
+        event = {'issue': {'number': 9, 'body': FILE, 'user': {'login': 'carol'}}}
+        screen = mock.Mock()
+        with self.assertRaises(archive.ArchiveError):
+            intake.intake(event, self.root, {'validation_errors': ['too many checks']}, age=lambda _: 30, screen=screen)
+        screen.assert_not_called()
+        self.assertEqual(archive.Archive(self.root).entries(), [])
 
     @unittest.skipUnless(shutil.which('docker'), 'Docker required for submitted verifiers')
     def test_tasks_need_a_sound_verifier_and_attempts_are_scored_pass_or_fail(self):

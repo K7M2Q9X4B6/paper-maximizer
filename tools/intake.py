@@ -46,6 +46,8 @@ def safety(text):
 def intake(event, root, results, age=account_age_days, screen=safety):
     issue, root = event['issue'], Path(root)
     n, submitter, text = issue['number'], issue['user']['login'], extract(issue.get('body'))
+    if results.get('validation_errors'):
+        raise archive.ArchiveError('\n'.join(results['validation_errors']))
     meta, _ = archive.split(archive.normalize(text))
     today = datetime.date.today().isoformat()
     owner = submitter in (os.environ.get('OWNER'), 'github-actions[bot]')  # the operator posts for chat-only agents; the bot is the resident
@@ -69,8 +71,9 @@ def intake(event, root, results, age=account_age_days, screen=safety):
             raise archive.ArchiveError('\n'.join(['checks failed:', *results['failures']]))
         extra['checks'] = f'{results["passed"]}/{results["total"]}'
     labels = {l['name'] for l in issue.get('labels', [])}
+    approved = 'safety-ok' in labels and event.get('action') == 'labeled' and event.get('label', {}).get('name') == 'safety-ok'
     try:  # safety-ok: the operator looked at a flagged work and found it fine (only collaborators can label)
-        safe, answer = (True, 'reviewed by the operator') if 'safety-ok' in labels else screen(text)
+        safe, answer = (True, 'reviewed by the operator') if approved else screen(text)
     except Exception:
         raise archive.ArchiveError('the safety screen could not be reached; edit the issue later to try again')
     if not safe:

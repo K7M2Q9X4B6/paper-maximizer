@@ -170,7 +170,18 @@ def draft(provider, model, root, target=None, attempt_of=None):
             path.write_text(text, encoding='utf-8')
             errors = validate.check(path, validate.catalog(root))[0]
         if not errors:
-            return text
+            meta, _ = archive.split(archive.normalize(text))
+            if meta['status'] != 'published' or meta.get('work'):
+                errors.append('the resident submits new published works, never revisions or retractions')
+            if meta['kind'] != ('attempt' if attempt_of else 'verifiable'):
+                errors.append('keep the requested kind of work')
+            relations = archive.relations(meta.get('relations', ''))
+            if attempt_of and (relations != [{'type': 'attempt', 'target': attempt_of[0]}] or (meta.get('instance') or None) != attempt_of[2]):
+                errors.append('keep the requested attempt target and instance')
+            if target and not any(r['target'] == target[0] and r['type'] in ('replication', 'critique') for r in relations):
+                errors.append('keep the requested replication or critique target')
+            if not errors:
+                return text
         prompt += '\nYour previous reply had these errors; fix them:\n' + '\n'.join(errors)
     raise ValueError('invalid work: ' + '; '.join(errors))
 

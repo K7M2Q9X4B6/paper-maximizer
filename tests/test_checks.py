@@ -9,6 +9,33 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
 import checks
+import archive
+
+class ScoringTests(unittest.TestCase):
+    def test_only_task_versions_can_supply_an_attempt_verifier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = '---\ntitle: Example\nauthor_model: m\nstatus: published\n---\n```verify\ndef verify(answer): return True\n```\n'
+            store = archive.Archive(root)
+            store.submit(source, 'R1', submitter='alice', extra={'kind': 'creative'})
+            answer = source.replace('status:', 'relations: attempt W0001@1\nstatus:') + '```answer\nx\n```\n'
+            with mock.patch.object(checks, 'judge', return_value=True) as judge:
+                self.assertEqual(checks.attempt_result(answer, root), 'error')
+                judge.assert_not_called()
+
+    def test_invalid_event_is_rejected_before_any_submitted_code_runs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'event.json'
+            header = '---\ntitle: Example\nsummary: s\nkind: creative\nauthor_model: m\nagent_name: a\nstatus: published\nlicense: CC0-1.0\n---\n'
+            cases = ['```check\nassert True\n```\n', header+'```check\nassert True\n```\n'*21,
+                     header.replace('kind: creative', 'kind: task\ninstances: '+'; '.join(str(i) for i in range(21)))+'```verify\ndef verify(answer, instance): return False\n```\n```reference\nx\n```\n']
+            for text in cases:
+                path.write_text(json.dumps({'issue': {'body': text}}), encoding='utf-8')
+                with mock.patch.object(checks, '_execute') as execute, mock.patch('builtins.print') as output:
+                    checks.main(['--event', str(path)])
+                execute.assert_not_called()
+                result = json.loads(output.call_args.args[0])
+                self.assertTrue(result['validation_errors'])
 
 class RunnerTests(unittest.TestCase):
     def test_judge_uses_same_sandbox_and_quotes_answer_as_data(self):

@@ -7,6 +7,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
 import llm
 
 class LlmTests(unittest.TestCase):
+    def test_resident_cannot_revise_existing_work_or_change_attempt_target(self):
+        import tempfile, resident, archive
+        header = '---\ntitle: Example\nsummary: s\nkind: creative\nauthor_model: m\nagent_name: a\nstatus: published\nlicense: CC0-1.0\n---\nText.\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            entry = archive.Archive(root).submit(header, 'R1', submitter='github-actions[bot]')
+            retraction = header.replace('status: published', 'status: retracted\nwork: W0001\nprev_hash: '+entry['sha256'])
+            wrong_target = header.replace('kind: creative', 'kind: attempt').replace('status:', 'relations: attempt W0001@1\ninstance: wrong\nstatus:') + 'Reasoning. '*70 + '\n```answer\nx\n```\n'
+            for reply in (header, retraction, wrong_target):
+                with self.subTest(reply=reply.splitlines()[4]), unittest.mock.patch.object(llm, 'call', return_value=reply) as call:
+                    with self.assertRaises(ValueError):
+                        resident.draft('openrouter', 'test:free', root, attempt_of=('W0001@1', 'Task', 'right'))
+                    self.assertEqual(call.call_count, 2)
+
     def test_screen_covers_tail_and_chunk_boundaries(self):
         text = 'a'*29000 + 'BOUNDARY' + 'b'*30000 + 'TAIL'
         seen = []

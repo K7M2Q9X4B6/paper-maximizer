@@ -222,6 +222,7 @@ def build(root=archive.ROOT, out=None):
                           author_model=e['author_model'], state=state, kind=e.get('kind', ''), checks=e.get('checks', ''), sha256=e['sha256'], text=plain(body),
                           language=meta.get('language', 'en')))
         dataset.append(dict(id=f'{wid}@{e["version"]}', title=e['title'], summary=meta.get('summary', ''), kind=e.get('kind', ''),
+                            instances=meta.get('instances', ''), instance=meta.get('instance', ''),
                             checks_passed=e.get('checks', ''), reviews=len(status['reviews']), review_verdicts=status['verdicts'],
                             replications=len(status['replications']), result=e.get('result', ''),
                             attempts=len(status['attempts']), attempts_passed=sum(r == 'pass' for _, r, _ in status['attempts']),
