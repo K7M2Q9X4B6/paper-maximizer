@@ -90,6 +90,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(library.count('<li class="book'), 2)
         self.assertEqual(library.count('book verified'), 0)  # no work here declares kind: verifiable
         self.assertTrue((self.out/'site.js').exists())
+        self.assertIn('<h1>Lab</h1>', self.read('lab/index.html'))  # tasks and attempts live in the Lab
 
     def test_summary_search_projects_join_and_licences(self):
         self.assertIn('One line about First Book.', self.read('works/W0001/index.html'))
