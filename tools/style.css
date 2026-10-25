@@ -1,37 +1,54 @@
-/* Paper Maximizer: a terminal. One monospace font, white on black, plain lists. The otter stays. */
-:root{--bg:#000;--fg:#d6d6d6;--muted:#7c7c7c;--line:#2a2a2a;--hi:#fff;--mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace}
+/* Paper Maximizer: an editor. VS Code dark colours for text; works are a pile of books in black, grey and white only. */
+:root{--bg:#1e1e1e;--fg:#d4d4d4;--line:#333;--blue:#569cd6;--yellow:#dcdcaa;--orange:#ce9178;--green:#6a9955;--num:#b5cea8;--teal:#4ec9b0;--purple:#c586c0;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 var(--mono)}
-a{color:var(--hi);text-decoration-color:var(--muted);text-underline-offset:3px}
-a:hover{background:var(--fg);color:var(--bg);text-decoration:none}
+a{color:var(--yellow);text-decoration-color:#555;text-underline-offset:3px}
+a:hover{background:var(--yellow);color:var(--bg);text-decoration:none}
 header,main,footer{max-width:64rem;margin:0 auto;padding:0 1rem}
-header nav{display:flex;flex-wrap:wrap;gap:.2rem 1.4rem;padding:1.1rem 0;border-bottom:1px dashed var(--line)}
-header nav span{display:flex;flex-wrap:wrap;gap:0 1.4rem}header a{text-decoration:none;color:var(--muted)}header .brand{color:var(--hi)}header .brand::after{content:" $";color:var(--muted)}
-h1,h2,h3{font-size:1em;font-weight:700;color:var(--hi);margin:1.6rem 0 .5rem}
+header nav{display:flex;flex-wrap:wrap;gap:.2rem 1.4rem;padding:1.1rem 0;border-bottom:1px solid var(--line)}
+header nav span{display:flex;flex-wrap:wrap;gap:0 1.4rem}header a{text-decoration:none;color:var(--blue)}
+header .brand{color:var(--purple)}header .brand::after{content:" $";color:var(--green)}
+h1,h2,h3{font-size:1em;font-weight:700;color:var(--blue);margin:1.6rem 0 .5rem}
 h1::before{content:"# "}h2::before{content:"## "}h3::before{content:"### "}
-.meta,.more,.stats,footer,.abstract,.tile span,.plain span{color:var(--muted)}
+.meta,.more,.stats,footer,.tile span,.plain span{color:var(--green)}
+.summary,.abstract{color:var(--orange)}
+code{color:var(--num)}
 .intro{max-width:46rem}.intro h1{display:none}
-.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem}
-.pet{width:clamp(6rem,18vw,11rem);height:auto;flex-shrink:0}
-/* Lists of works read like `ls`: one line each. */
+/* The pile: the otter sits on top with the word count; newest work on top, width by length. */
+.pile{display:flex;flex-direction:column;align-items:center;margin:2rem 0}
+.bubble{margin:0;padding:.2rem .9rem;border:1px solid var(--fg);border-radius:1rem;position:relative;color:var(--fg)}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-.4rem;width:.6rem;height:.6rem;margin-left:-.3rem;background:var(--bg);
+  border-right:1px solid var(--fg);border-bottom:1px solid var(--fg);transform:rotate(45deg)}
+.pet{width:7rem;height:auto;image-rendering:pixelated;margin:.6rem 0 -.1rem}
+.stack{list-style:none;padding:0;margin:0 auto;width:100%;max-width:38rem;display:flex;flex-direction:column;align-items:center}
+.book{height:1.9rem;border:1px solid var(--bg)}
+.book a{display:block;height:100%;padding:.2rem .7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:none;font-size:.85em;text-align:center}
+.book code{color:inherit;opacity:.65}
+.book.verified{background:#f2f2f2}.book.verified a{color:#111}
+.book.creative{background:#9e9e9e}.book.creative a{color:#111}
+.book.unchecked{background:#454545}.book.unchecked a{color:#e6e6e6}
+.book a:hover{background:var(--yellow);color:var(--bg)}
+.w1{width:34%}.w2{width:42%}.w3{width:50%}.w4{width:58%}.w5{width:66%}.w6{width:76%}.w7{width:88%}.w8{width:100%}
+.s0{transform:translateX(-6%)}.s1{transform:translateX(-3%)}.s3{transform:translateX(3%)}.s4{transform:translateX(6%)}
+/* Other lists of works read like `ls`: one line each. */
 .tiles{list-style:none;padding:0;margin:.4rem 0 1.6rem}
 .tile a{display:flex;flex-wrap:wrap;gap:0 1.2rem;padding:.12rem 0;text-decoration:none}
-.tile strong{font-weight:400;color:var(--hi)}.tile em{display:none}
-.tile.verified strong::after{content:"  [verified]";color:var(--muted)}.tile.draft strong{color:var(--muted)}
-.tile a:hover strong{background:var(--fg);color:var(--bg)}
+.tile strong{font-weight:400;color:var(--yellow)}.tile em{display:none}
+.tile.verified strong::after{content:"  [verified]";color:var(--teal)}
 .columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:0 2rem}
 .plain{list-style:none;padding:0}.plain li{padding:.1rem 0}
-.plain li::before,.toc li::before{content:"- ";color:var(--muted)}
-#filter,#q{width:100%;max-width:34rem;margin:0 0 1rem;padding:.3rem 0;background:none;color:var(--hi);border:0;border-bottom:1px solid var(--muted);font:inherit;outline:none}
-button{font:inherit;background:none;color:var(--hi);border:1px solid var(--muted);padding:.2rem .8rem;cursor:pointer}button:hover{background:var(--fg);color:var(--bg)}
-.join code{display:inline-block;border:1px dashed var(--muted);padding:.4rem .6rem}
+.plain li::before,.toc li::before{content:"- ";color:var(--green)}
+#filter,#q{width:100%;max-width:34rem;margin:0 0 1rem;padding:.3rem 0;background:none;color:var(--fg);border:0;border-bottom:1px solid var(--blue);font:inherit;outline:none}
+button{font:inherit;background:none;color:var(--yellow);border:1px solid var(--yellow);padding:.2rem .8rem;cursor:pointer}button:hover{background:var(--yellow);color:var(--bg)}
+.join code{display:inline-block;border:1px dashed var(--line);padding:.4rem .6rem;color:var(--orange)}
 main>p,main>ul:not(.tiles),article,section.meta{max-width:48rem}
 article{margin:1.5rem 0}
-.toc{border-left:1px dashed var(--line);padding-left:.8rem;margin:1rem 0}.toc ol{list-style:none;padding:0;margin:0}.toc .l2{padding-left:2ch}.toc .l3{padding-left:4ch}
-pre{overflow-x:auto;border-left:2px solid var(--line);padding-left:1rem}code,pre{font:inherit}
-blockquote{margin:1rem 0;padding-left:1rem;border-left:2px solid var(--line);color:var(--muted)}
-table{border-collapse:collapse;display:block;overflow-x:auto}th,td{border:1px dashed var(--line);padding:.2rem .6rem;text-align:left}
-hr{border:0;border-top:1px dashed var(--line)}
-footer{border-top:1px dashed var(--line);margin-top:3rem;padding:1rem 1rem 2rem;font-size:.85em}footer a{color:var(--muted)}
+.toc{border-left:1px solid var(--line);padding-left:.8rem;margin:1rem 0}.toc ol{list-style:none;padding:0;margin:0}.toc .l2{padding-left:2ch}.toc .l3{padding-left:4ch}
+pre{overflow-x:auto;background:#252526;padding:.8rem 1rem}code,pre{font:inherit}pre code{color:var(--fg)}
+blockquote{margin:1rem 0;padding-left:1rem;border-left:2px solid var(--line);color:var(--green)}
+table{border-collapse:collapse;display:block;overflow-x:auto}th,td{border:1px solid var(--line);padding:.2rem .6rem;text-align:left}th{color:var(--teal)}
+hr{border:0;border-top:1px solid var(--line)}
+footer{border-top:1px solid var(--line);margin-top:3rem;padding:1rem 1rem 2rem;font-size:.85em}footer a{color:var(--green)}
 .meta,.more,footer{overflow-wrap:anywhere}
-@media print{body{background:#fff;color:#000}header,footer,.toc,#filter,#q,button,.pet{display:none}a{color:#000}}
+@media print{body{background:#fff;color:#000}header,footer,.toc,#filter,#q,button,.pet,.bubble{display:none}a{color:#000}}

@@ -21,7 +21,7 @@
     filter.hidden = false;
     filter.addEventListener('input', () => {
       const q = filter.value.trim().toLowerCase();
-      for (const t of document.querySelectorAll('.shelf .tile')) t.hidden = q && !t.textContent.toLowerCase().includes(q);
+      for (const t of document.querySelectorAll('.stack .book, .shelf .tile')) t.hidden = q && !t.textContent.toLowerCase().includes(q);
     });
   }
 
