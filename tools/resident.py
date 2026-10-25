@@ -2,6 +2,7 @@
 
 Usage: python tools/resident.py write > work.md       (needs the API-key secrets; runs no generated code)
        python tools/resident.py replicate > work.md   (re-derives the oldest unreplicated verifiable work with another model)
+       python tools/resident.py attempt N > work.md   (writer model N tries the least-attempted task; failures are kept)
        python tools/resident.py submit work.md    (opens the [submission] issue; prints its number)
 The intake workflow then re-runs the checks, applies the rules and the safety screen, and publishes or explains.
 """
@@ -14,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import archive  # noqa: E402
+import checks  # noqa: E402
 import llm  # noqa: E402
 import validate  # noqa: E402
 
@@ -64,6 +66,48 @@ relations: replication {target}
 WORK>>>
 '''
 
+ATTEMPT = '''You are {name}, the resident agent of Paper Maximizer. Try to solve the task below honestly.
+Work it out step by step. If something you try fails, say so and why, separating what you confirmed from what you only suspect.
+End with exactly one ```answer block that contains only your final answer. Do not claim success; the library scores it.
+
+Reply with the file only, starting exactly like this:
+---
+title: Attempt: <the task title>
+summary: <one plain sentence on how you approached it>
+kind: attempt
+author_model: {model}
+agent_name: {name}
+status: published
+license: CC0-1.0
+form: attempt
+relations: attempt {target}
+resources: <rough tokens and minutes you used, self-reported>
+---
+# Attempt: <the task title>
+
+<<<TASK {target}
+{text}
+TASK>>>
+'''
+
+def open_task(root=archive.ROOT):
+    """The task with the fewest attempts, as (target, text without its reference answer), or None."""
+    store, down = archive.Archive(root), (root/'takedown.txt').read_text(encoding='utf-8') if (root/'takedown.txt').exists() else ''
+    latest = {e['work_id']: e for e in store.entries()}
+    tasks = [e for wid, e in latest.items() if e.get('kind') == 'task' and wid not in down]
+    if not tasks:
+        return None
+    e = min(tasks, key=lambda e: len(store.state(e['work_id'])['attempts']))
+    return f'{e["work_id"]}@{e["version"]}', checks.REFERENCE.sub('', (root/e['file']).read_text(encoding='utf-8'))
+
+def attempt(root=archive.ROOT, index=0):
+    """One attempt by writer model number `index`: one model per call, so a run gives several independent tries."""
+    task = open_task(root)
+    if not task:
+        raise SystemExit('no tasks yet')
+    provider, model = llm.MODELS['writer'][index]
+    return draft(provider, model, root, attempt_of=task)
+
 def candidate(root=archive.ROOT):
     """The oldest verifiable work nobody has replicated yet, as (target, author_model, text), or None."""
     store, down = archive.Archive(root), (root/'takedown.txt').read_text(encoding='utf-8') if (root/'takedown.txt').exists() else ''
@@ -95,15 +139,18 @@ def write(root=archive.ROOT, replicate=False):
             failures.append(f'{model}: {exc}')
     raise SystemExit('no writer model produced a valid work:\n' + '\n'.join(failures))
 
-def draft(provider, model, root, target=None):
+def draft(provider, model, root, target=None, attempt_of=None):
     big = campfire(root)
     titles = '; '.join(e['title'] for e in archive.Archive(root).entries()[-30:]) or 'none yet'
-    prompt = (REPLICATE.format(name=NAME, model=model.split(':')[0], target=target[0], text=target[2]) if target else
+    prompt = ATTEMPT.format(name=NAME, model=model.split(':')[0], target=attempt_of[0], text=attempt_of[1]) if attempt_of else (REPLICATE.format(name=NAME, model=model.split(':')[0], target=target[0], text=target[2]) if target else
               PROMPT.format(name=NAME, model=model.split(':')[0], titles=titles,
                             topic=f' to the Campfire question "{big[1]}"' if big else '',
                             relation=f'\nrelations: contribution {big[0]}' if big else ''))
     for _ in range(2):
-        text = re.sub(r'^```\w*\n|\n```\s*$', '', llm.call(provider, model, prompt, max_tokens=6000).strip()) + '\n'
+        reply = llm.call(provider, model, prompt, max_tokens=6000).strip()
+        if reply.startswith('```'):  # the whole reply wrapped in one fence; inner blocks (checks, answers) stay
+            reply = re.sub(r'^```\w*\n|\n```$', '', reply)
+        text = reply + '\n'
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)/'submissions'/'resident.md'
             path.parent.mkdir()
@@ -124,6 +171,8 @@ def submit(path):
 if __name__ == '__main__':
     if sys.argv[1:2] in (['write'], ['replicate']):
         sys.stdout.write(write(replicate=sys.argv[1] == 'replicate'))
+    elif sys.argv[1:2] == ['attempt']:
+        sys.stdout.write(attempt(index=int(sys.argv[2])))
     elif sys.argv[1:2] == ['submit']:
         submit(sys.argv[2])
     else:

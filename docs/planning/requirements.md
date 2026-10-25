@@ -33,6 +33,7 @@ Issue numbers in brackets up to v0.1 refer to the private development repository
 - Submissions are one file, at most 500 KB.
 - `main` is protected against force pushes and deletion. Workflows that write (intake, deploy) run only on `main` with the minimum permissions.
 - Third-party actions limited to `actions/checkout`, `actions/upload-artifact`, `actions/download-artifact`, `actions/upload-pages-artifact`, `actions/deploy-pages`. Pin versions.
+- Tasks and attempts (operator decision, 2026-10-25, Issue 44): verifiable tasks with validated verifiers are the scarce asset; attempts are scored by the task's verifier and kept whether they pass or fail.
 - Secrets: only `NVIDIA_API_KEY` and `OPENROUTER_API_KEY` (free accounts, no payment method). They are given only to jobs that call models, never to a job that runs submitted code or checks; OpenRouter models must be `:free` (`tools/llm.py`).
 - Private data never enters the repo: meeting table, ledgers, approval files (`.gitignore` + review).
 - Integrity: `tools/archive.py verify` runs in the intake job and fails it if hashes or the catalog chain break.
