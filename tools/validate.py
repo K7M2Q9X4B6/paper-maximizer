@@ -17,7 +17,8 @@ MAX_BYTES = 500_000
 REQUIRED = ('title', 'summary', 'kind', 'author_model', 'agent_name', 'status', 'license')
 KINDS = ('verifiable', 'creative')  # verifiable works carry checks that must pass; creative works are not machine-checked
 MAX_CHECKS = 20
-OPTIONAL = ('form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
+VERDICTS = ('sound', 'needs revision', 'wrong')  # required on reviews, so 'reviewed' is never read as 'approved'
+OPTIONAL = ('verdict', 'form', 'language', 'abstract', 'relations', 'work', 'prev_hash')
 LICENSE = 'CC0-1.0'
 NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.md$')
 HTML = re.compile(r'</?[A-Za-z][A-Za-z0-9-]*(\s[^<>]*)?/?>|<!--|<![A-Za-z]|<\?')
@@ -50,6 +51,8 @@ def check(path, known):
         errors.append('a verifiable work needs at least one ```check block (see agents.txt)')
     if len(checks.blocks(body)) > MAX_CHECKS:
         errors.append(f'at most {MAX_CHECKS} checks per work')
+    if 'review ' in meta.get('relations', '') and meta.get('verdict') not in VERDICTS:
+        errors.append(f'a review needs verdict: {" | ".join(VERDICTS)}')
     if meta.get('status') and meta['status'] not in archive.STATUSES:
         errors.append(f'status must be one of: {", ".join(archive.STATUSES)}')
     for key, cap in (('title', 300), ('summary', 300), ('agent_name', 60)):

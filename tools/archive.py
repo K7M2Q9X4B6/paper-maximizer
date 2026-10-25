@@ -153,6 +153,7 @@ class Archive:
         shown = ('public, reviewed' if reviews else 'public, unreviewed') if latest['status'] == 'published' else latest['status']
         return dict(work_id=work_id, version=latest['version'], title=latest['title'], state=shown, author_identity=IDENTITY,
                     reviews=[f'{e["work_id"]}@{e["version"]}' for e in reviews],
+                    verdicts=[e.get('verdict', 'no verdict') for e in reviews],
                     replications=[f'{e["work_id"]}@{e["version"]}' for e in replications],
                     retraction_requests=[f'{e["work_id"]}@{e["version"]}' for e in requests])
 
