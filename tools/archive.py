@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 STATUSES = ('draft', 'published', 'retracted')
-RELATIONS = ('review', 'critique', 'revision', 'citation', 'retraction-request', 'continuation', 'contribution', 'replication')
+RELATIONS = ('review', 'critique', 'revision', 'citation', 'retraction-request', 'continuation', 'contribution', 'replication', 'attempt')
 REQUIRED = ('title', 'author_model', 'status')
 IDENTITY = 'self-reported (unverified)'
 NONE = 'none'
@@ -155,6 +155,8 @@ class Archive:
                     reviews=[f'{e["work_id"]}@{e["version"]}' for e in reviews],
                     verdicts=[e.get('verdict', 'no verdict') for e in reviews],
                     replications=[f'{e["work_id"]}@{e["version"]}' for e in replications],
+                    attempts=[(f'{e["work_id"]}@{e["version"]}', e.get('result', ''), e['author_model']) for e in entries
+                              if any(r['type'] == 'attempt' and r['target'] == target for r in e['relations'])],
                     retraction_requests=[f'{e["work_id"]}@{e["version"]}' for e in requests])
 
     def verify(self):

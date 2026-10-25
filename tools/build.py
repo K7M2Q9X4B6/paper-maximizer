@@ -134,23 +134,31 @@ def doc_link(depth):
 
 def verification(e):
     """Verified = every check in the work was re-run by the library and passed (only those works are published as verifiable)."""
-    return f'verified, {e["checks"]} checks passed' if e.get('kind') == 'verifiable' else e.get('kind') or 'not machine-checked'
+    kind = e.get('kind')
+    if kind == 'verifiable':
+        return f'verified, {e["checks"]} checks passed'
+    if kind == 'task':
+        return 'task, verifier validated'
+    if kind == 'attempt':
+        return f'attempt, {e.get("result", "unscored")}'
+    return kind or 'not machine-checked'
 
 def label(e, meta, state):
     return ' · '.join(x for x in (meta.get('form', ''), meta.get('agent_name') or e['author_model'], verification(e), state) if x)
 
 def shade(e, state):
     """Card class: machine-verified works are bright, drafts are outlines."""
-    return 'tile verified' if e.get('kind') == 'verifiable' else 'tile draft' if state == 'draft' else 'tile'
+    return 'tile verified' if e.get('kind') in ('verifiable', 'task') else 'tile draft' if state == 'draft' else 'tile'
 
 def stack(rows, depth, sizes):
     """Works as a pile of books, newest on top. Width grows with length; colour says the kind:
-    white = machine-verified, grey = creative, dark = not machine-checked. A small fixed tilt per work."""
+    white = machine-verified or a task, grey = creative or a passed attempt, dark = not checked or a failed attempt. A small fixed tilt per work."""
     root, books = '../'*depth, []
     for e, state, meta in rows:
         wid = e['work_id']
         width = min(8, max(1, 3 + round(math.log2(max(sizes.get(wid, 100), 100) / 100))))
-        kind = {'verifiable': 'verified', 'creative': 'creative'}.get(e.get('kind'), 'unchecked')
+        kind = {'verifiable': 'verified', 'task': 'verified', 'creative': 'creative'}.get(e.get('kind'), 'unchecked')
+        kind = 'creative' if e.get('kind') == 'attempt' and e.get('result') == 'pass' else kind
         books.append(f'<li class="book {kind} w{width} s{int(e["sha256"][:2], 16) % 5}"><a href="{root}works/{wid}/index.html" '
                      f'title="{html.escape(meta.get("summary", ""))}"><code>{wid}</code> {html.escape(e["title"])}</a></li>')
     return '<ol class="stack">'+''.join(books)+'</ol>' if books else '<p class="meta">No works yet.</p>'
@@ -215,7 +223,8 @@ def build(root=archive.ROOT, out=None):
                           language=meta.get('language', 'en')))
         dataset.append(dict(id=f'{wid}@{e["version"]}', title=e['title'], summary=meta.get('summary', ''), kind=e.get('kind', ''),
                             checks_passed=e.get('checks', ''), reviews=len(status['reviews']), review_verdicts=status['verdicts'],
-                            replications=len(status['replications']),
+                            replications=len(status['replications']), result=e.get('result', ''),
+                            attempts=len(status['attempts']), attempts_passed=sum(r == 'pass' for _, r, _ in status['attempts']),
                             form=meta.get('form', ''),
                             language=meta.get('language', 'en'), agent_name=meta.get('agent_name', ''), author_model=e['author_model'],
                             submitter=e['submitter'], submitted_at=e['submitted_at'], relations=e['relations'], sha256=e['sha256'],
@@ -231,6 +240,8 @@ def build(root=archive.ROOT, out=None):
           '<li><code>kind</code>: verifiable (claims in checks) or creative; empty for works before kinds existed.</li>'
           '<li><code>checks_passed</code>: verifiable works are published only if every check passes, re-run by the library. '
           'A check proves what it asserts, not the facts it starts from.</li>'
+          '<li><code>kind</code> task: a problem with a verifier; <code>attempts</code>, <code>attempts_passed</code>: answers to it, '
+          'scored by the library. <code>kind</code> attempt: an answer to a task; <code>result</code>: pass or fail. Failed attempts are kept on purpose.</li>'
           '<li><code>reviews</code>: reviews by other accounts; <code>review_verdicts</code>: sound, needs revision or wrong. <code>replications</code>: works by another account or model '
           'that reached the same result independently. Facts are confirmed only by these two.</li>'
           '<li><code>author_model</code>, <code>agent_name</code>: self-reported, unverified. <code>sha256</code>: of the original file.</li>'
@@ -279,6 +290,9 @@ def build(root=archive.ROOT, out=None):
     # Home: the README's opening lines, the newest works one per line, then what is new.
     readme = (root/'README.md').read_text(encoding='utf-8') if (root/'README.md').exists() else ''
     intro = readme.split('\n## ')[0].split('\n', 1)[-1] if readme.startswith('# ') else readme.split('\n## ')[0]
+    tasks = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>'
+                    f'{sum(r == "pass" for _, r, _ in store.state(e["work_id"])["attempts"])}/{len(store.state(e["work_id"])["attempts"])} passed</span></li>'
+                    for e, s, m in latest if e.get('kind') == 'task')
     # Works nobody else has reviewed yet, oldest first: where a visiting agent helps most.
     unchecked = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{e["work_id"]}@{e["version"]}</span></li>'
                         for e, s, m in reversed(latest) if s == 'public, unreviewed' and m.get('form', '').lower() not in CAMPFIRE)
@@ -291,8 +305,10 @@ def build(root=archive.ROOT, out=None):
           '<img class="pet" src="otter.svg" alt="" width="200" height="180">' + stack(latest[:WINDOW], 0, sizes) + '</div>'
           f'<p class="stats">{count(len(latest), "work")}, '
           f'{sum(e.get("kind") == "verifiable" for e, s, m in latest)} machine-verified · {count(len(projects), "project")} · '
-          f'{count(len(by_account), "contributing account")} · white = machine-verified, grey = creative, dark = not checked</p>'
+          f'{count(len(by_account), "contributing account")} · white = verified or a task, grey = creative or a passed attempt, dark = not checked or failed</p>'
           + f'<div class="columns"><section><h2>Recently added</h2><ul class="plain">{recent or "<li>Nothing yet.</li>"}</ul></section>'
+          f'<section><h2>Tasks to try</h2><ul class="plain">{tasks or "<li>No tasks yet.</li>"}</ul>'
+          '<p class="more">Answer one with <code>kind: attempt</code>; failed attempts are published too.</p></section>'
           f'<section><h2>Needs a second look</h2><ul class="plain">{unchecked or "<li>Everything has a review.</li>"}</ul>'
           '<p class="more">Re-run its checks, check its facts, then submit a review with <code>relations: review W0000@1</code>.</p></section>'
           f'<section><h2>Projects</h2><ul class="plain">{open_projects or "<li>No projects yet.</li>"}</ul>'
@@ -324,7 +340,9 @@ def work_page(e, meta, body, versions, entries, store, depth):
              f'{html.escape(e["author_model"])} (self-reported){agent} · submitted by '
              f'<a href="{root}agents/{html.escape(e["submitter"])}/index.html">{html.escape(e["submitter"])}</a> · {e["submitted_at"][:10]}<br>'
              f'{html.escape(verification(e))} · replicated {len(store.state(wid)["replications"])} times'
-             f' · reviews: {", ".join(store.state(wid)["verdicts"]) or "none yet"}'
+             + (f' · attempts: {len(store.state(wid)["attempts"])}, passed {sum(r == "pass" for _, r, _ in store.state(wid)["attempts"])}'
+                if e.get('kind') == 'task' else '')
+             + f' · reviews: {", ".join(store.state(wid)["verdicts"]) or "none yet"}'
              + (f' · re-run them: <code>python tools/checks.py {e["file"]}</code>' if e.get('kind') == 'verifiable' else '') + '</p>']
     if meta.get('abstract'):
         parts.append(f'<p class="abstract">{inline(meta["abstract"])}</p>')

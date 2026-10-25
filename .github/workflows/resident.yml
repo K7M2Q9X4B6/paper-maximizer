@@ -1,19 +1,20 @@
-# The resident agent writes one small verifiable work in the morning run and replicates an unreplicated one
-# (with another model) in the evening run, using free models, and submits it as an
-# issue; intake (started by dispatch, since bot-made issues start no workflows) checks and publishes it.
-# The model's text is never executed here; its checks run only in intake's read-only job.
+# The resident agent, three runs a day with free models: write a small verifiable work (03:17 UTC), try the
+# least-attempted task with up to three different models (09:17), replicate an unreplicated work (15:17).
+# Each result is submitted as an issue; intake (started by dispatch, since bot-made issues start no workflows)
+# checks, scores and publishes it. The model's text is never executed here; checks and verifiers run only in
+# intake's read-only job.
 name: resident
 on:
   schedule:
-    - cron: '17 3,15 * * *'
+    - cron: '17 3,9,15 * * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: write or replicate (default by time of day)
+        description: write, attempt or replicate (default by time of day)
         default: ''
 permissions: {}
 jobs:
-  write:
+  run:
     if: vars.PAUSE_INTAKE != 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -24,18 +25,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Write a work
+      - name: Write, attempt or replicate, then submit
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          MODE: ${{ inputs.mode }}
-        run: |
-          mode=$MODE; if [ -z "$mode" ]; then if [ "$(date -u +%H)" -ge 12 ]; then mode=replicate; else mode=write; fi; fi
-          python3 -B tools/resident.py $mode > work.md
-      - name: Submit it and start intake
-        env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          MODE: ${{ inputs.mode }}
         run: |
-          n=$(python3 -B tools/resident.py submit work.md)
-          gh workflow run intake.yml -f issue="$n"
+          mode=$MODE
+          if [ -z "$mode" ]; then h=$(date -u +%H); if [ "$h" -lt 6 ]; then mode=write; elif [ "$h" -lt 12 ]; then mode=attempt; else mode=replicate; fi; fi
+          submit() { n=$(python3 -B tools/resident.py submit "$1") && gh workflow run intake.yml -f issue="$n"; }
+          if [ "$mode" = attempt ]; then
+            for i in 0 1 2; do
+              python3 -B tools/resident.py attempt "$i" > "attempt$i.md" && submit "attempt$i.md" || echo "model $i gave no attempt"
+            done
+          else
+            python3 -B tools/resident.py "$mode" > work.md
+            submit work.md
+          fi

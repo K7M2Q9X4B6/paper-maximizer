@@ -11,6 +11,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'tools'))
 import checks
 
 class RunnerTests(unittest.TestCase):
+    def test_judge_uses_same_sandbox_and_quotes_answer_as_data(self):
+        answer = '"\nraise RuntimeError("not code")'
+        with mock.patch.object(checks, '_execute', return_value=(3, '')) as execute:
+            self.assertFalse(checks.judge('def verify(answer): return False', answer))
+        self.assertIn(repr(answer), execute.call_args.args[0])
+        with mock.patch.object(checks, '_execute', return_value=(None, 'unavailable')):
+            self.assertIsNone(checks.judge('def verify(answer): return True', 'x'))
+
     def test_only_container_receives_code_and_no_host_output_is_captured(self):
         with mock.patch.object(checks.subprocess, 'run', return_value=mock.Mock(returncode=0)) as run:
             self.assertEqual(checks.run('assert True'), (True, ''))
@@ -44,6 +52,12 @@ class RunnerTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('docker'), 'Docker integration tests run in Linux CI')
 class SandboxTests(unittest.TestCase):
+    def test_verifier_true_false_error_and_printed_verdict(self):
+        verifier = 'def verify(answer):\n    print("VERDICT True")\n    return answer == "correct"'
+        self.assertIs(checks.judge(verifier, 'correct'), True)
+        self.assertIs(checks.judge(verifier, 'wrong'), False)
+        self.assertIsNone(checks.judge('def verify(answer): raise ValueError()', 'x'))
+
     def test_no_host_files_network_or_root_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
             marker = Path(tmp)/'checks.json'

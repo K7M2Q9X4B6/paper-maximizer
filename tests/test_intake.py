@@ -23,7 +23,7 @@ class IntakeTests(unittest.TestCase):
     def run_issue(self, body, n=7, login='carol', age=30, results=None, safe=True):
         event, found = self.root/'event.json', self.root/'checks.json'
         event.write_text(json.dumps({'issue': {'number': n, 'body': body, 'user': {'login': login}}}), encoding='utf-8')
-        found.write_text(json.dumps(results or checks.check(intake.extract(body))), encoding='utf-8')
+        found.write_text(json.dumps(results or checks.check(intake.extract(body), self.root)), encoding='utf-8')
         verdict = (lambda _: (safe, 'User Safety: ' + ('safe' if safe else 'unsafe\nSafety Categories: Weapons')))
         code = intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: age, screen=verdict)
         return code, (self.root/'intake-reply.md').read_text(encoding='utf-8')
@@ -76,6 +76,19 @@ class IntakeTests(unittest.TestCase):
         found.write_text(json.dumps(checks.check(FILE)), encoding='utf-8')
         def flag(_): return False, 'User Safety: unsafe'
         self.assertEqual(intake.main([str(event), '--checks', str(found), '--root', str(self.root)], age=lambda _: 30, screen=flag), 0)
+
+    @unittest.skipUnless(shutil.which('docker'), 'Docker required for submitted verifiers')
+    def test_tasks_need_a_sound_verifier_and_attempts_are_scored_pass_or_fail(self):
+        task = FILE.replace('creative', 'task') + '```verify\ndef verify(answer):\n    return answer.strip() == "5050"\n```\n```reference\n5050\n```\n'
+        loose = task.replace('return answer.strip() == "5050"', 'return True')
+        code, reply = self.run_issue(loose, n=1)
+        self.assertEqual(code, 1); self.assertIn("does not reject the trivial answer ''", reply)
+        self.assertEqual(self.run_issue(task, n=2)[0], 0)  # W0001
+        attempt = FILE.replace('creative', 'attempt').replace('status:', 'relations: attempt W0001@1\nstatus:') + '```answer\n5050\n```\n'
+        self.assertEqual(self.run_issue(attempt, n=3)[0], 0)
+        self.assertEqual(self.run_issue(attempt.replace('5050\n```', '5051\n```'), n=4)[0], 0)  # a wrong answer is kept too
+        self.assertEqual([e.get('result') for e in archive.Archive(self.root).entries()], [None, 'pass', 'fail'])
+        self.assertEqual([r for _, r, _ in archive.Archive(self.root).state('W0001')['attempts']], ['pass', 'fail'])
 
     def test_event_command_prints_the_workflow_event(self):
         path = self.root/'gh-event.json'
