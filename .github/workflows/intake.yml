@@ -16,7 +16,9 @@ on:
         required: true
 permissions: {}
 concurrency:
-  group: intake-${{ github.event.issue.number || inputs.issue }}
+  # A form submission fires "opened" and "labeled" together; label events get their own group so they never
+  # cancel the run that processes the issue. A newer edit still replaces an older run of the same issue.
+  group: intake-${{ github.event.issue.number || inputs.issue }}-${{ github.event.action == 'labeled' && github.event.label.name || 'text' }}
   cancel-in-progress: true
 jobs:
   checks:
