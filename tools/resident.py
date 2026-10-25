@@ -81,25 +81,35 @@ agent_name: {name}
 status: published
 license: CC0-1.0
 form: attempt
-relations: attempt {target}
+relations: attempt {target}{instance}
 resources: <rough tokens and minutes you used, self-reported>
 ---
 # Attempt: <the task title>
-
+{focus}
 <<<TASK {target}
 {text}
 TASK>>>
 '''
 
 def open_task(root=archive.ROOT):
-    """The task with the fewest attempts, as (target, text without its reference answer), or None."""
+    """The least-tried (task, instance), as (target, text without its reference answers, instance or None), or None."""
     store, down = archive.Archive(root), (root/'takedown.txt').read_text(encoding='utf-8') if (root/'takedown.txt').exists() else ''
-    latest = {e['work_id']: e for e in store.entries()}
-    tasks = [e for wid, e in latest.items() if e.get('kind') == 'task' and wid not in down]
-    if not tasks:
+    entries = store.entries()
+    latest = {e['work_id']: e for e in entries}
+    tried = {}
+    for e in entries:
+        for r in e['relations']:
+            if r['type'] == 'attempt':
+                tried[(r['target'], e.get('instance'))] = tried.get((r['target'], e.get('instance')), 0) + 1
+    options = []
+    for wid, e in latest.items():
+        if e.get('kind') == 'task' and wid not in down:
+            text, target = (root/e['file']).read_text(encoding='utf-8'), f'{wid}@{e["version"]}'
+            options += [(tried.get((target, i), 0), target, text, i) for i in checks.instances(text)]
+    if not options:
         return None
-    e = min(tasks, key=lambda e: len(store.state(e['work_id'])['attempts']))
-    return f'{e["work_id"]}@{e["version"]}', checks.REFERENCE.sub('', (root/e['file']).read_text(encoding='utf-8'))
+    _, target, text, instance = min(options, key=lambda o: o[0])
+    return target, checks.REFERENCE.sub('', text), instance
 
 def attempt(root=archive.ROOT, index=0):
     """One attempt by writer model number `index`: one model per call, so a run gives several independent tries."""
@@ -143,7 +153,9 @@ def write(root=archive.ROOT, replicate=False):
 def draft(provider, model, root, target=None, attempt_of=None):
     big = campfire(root)
     titles = '; '.join(e['title'] for e in archive.Archive(root).entries()[-30:]) or 'none yet'
-    prompt = ATTEMPT.format(name=NAME, model=model.split(':')[0], target=attempt_of[0], text=attempt_of[1]) if attempt_of else (REPLICATE.format(name=NAME, model=model.split(':')[0], target=target[0], text=target[2]) if target else
+    prompt = ATTEMPT.format(name=NAME, model=model.split(':')[0], target=attempt_of[0], text=attempt_of[1],
+                            instance=f'\ninstance: {attempt_of[2]}' if attempt_of[2] else '',
+                            focus=f'\nSolve only the instance {attempt_of[2]} of this task.\n' if attempt_of[2] else '') if attempt_of else (REPLICATE.format(name=NAME, model=model.split(':')[0], target=target[0], text=target[2]) if target else
               PROMPT.format(name=NAME, model=model.split(':')[0], titles=titles,
                             topic=f' to the Campfire question "{big[1]}"' if big else '',
                             relation=f'\nrelations: contribution {big[0]}' if big else ''))

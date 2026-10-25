@@ -54,9 +54,24 @@ def _execute(code):
         except (OSError, subprocess.TimeoutExpired):
             pass
 
-def judge(verify_code, answer):
-    """True or False from the task's verify(answer), or None if it errors or runs too long."""
-    code = verify_code + f'\nimport sys\nsys.exit(0 if verify({answer!r}) else 3)'
+MAX_INSTANCES = 20
+
+def instances(text):
+    """A task template's parameter values ('instances: 3x10; 3x12'), or [None] for a single problem."""
+    meta = archive.split(archive.normalize(text))[0]
+    return [i.strip() for i in meta.get('instances', '').split(';') if i.strip()] or [None]
+
+def references(text):
+    """{instance: reference answer}. A template's reference block has one 'instance: answer' line per instance."""
+    ref = REFERENCE.findall(text)[0].strip()
+    if instances(text) == [None]:
+        return {None: ref}
+    return {k.strip(): v.strip() for k, _, v in (line.partition(':') for line in ref.splitlines()) if v}
+
+def judge(verify_code, answer, instance=None):
+    """True or False from the task's verify(answer[, instance]), or None if it errors or runs too long."""
+    args = repr(answer) if instance is None else f'{answer!r}, {instance!r}'
+    code = verify_code + f'\nimport sys\nsys.exit(0 if verify({args}) else 3)'
     status, _ = _execute(code)
     return {0: True, 3: False}.get(status)
 
@@ -65,13 +80,20 @@ def task_problems(text):
     verify, reference = VERIFY.findall(text), REFERENCE.findall(text)
     if len(verify) != 1 or len(reference) != 1:
         return ['a task needs exactly one verify block and one reference block']
-    problems, ref = [], reference[0].strip()
-    first, second = judge(verify[0], ref), judge(verify[0], ref)
-    if first is not True:
-        problems.append('the reference answer does not pass verify')
-    if first != second:
-        problems.append('verify gives different results on reruns')
-    problems += [f'verify does not reject the trivial answer {t!r}' for t in TRIVIAL if judge(verify[0], t) is not False]
+    names, refs, problems = instances(text), references(text), []
+    if len(names) > MAX_INSTANCES:
+        return [f'at most {MAX_INSTANCES} instances per task']
+    for name in names:  # each instance is its own problem: same checks for every one
+        at = '' if name is None else f' (instance {name})'
+        if name not in refs:
+            problems.append(f'no reference answer for instance {name}')
+            continue
+        first, second = judge(verify[0], refs[name], name), judge(verify[0], refs[name], name)
+        if first is not True:
+            problems.append(f'the reference answer does not pass verify{at}')
+        if first != second:
+            problems.append(f'verify gives different results on reruns{at}')
+        problems += [f'verify does not reject the trivial answer {t!r}{at}' for t in TRIVIAL if judge(verify[0], t, name) is not False]
     return problems
 
 def attempt_result(text, root=archive.ROOT):
@@ -82,8 +104,11 @@ def attempt_result(text, root=archive.ROOT):
     files = {f'{e["work_id"]}@{e["version"]}': e['file'] for e in archive.Archive(root).entries()}
     if len(targets) != 1 or len(answers) != 1 or targets[0] not in files:
         return 'error'
-    verify = VERIFY.findall((Path(root)/files[targets[0]]).read_text(encoding='utf-8'))
-    verdict = judge(verify[0], answers[0].strip()) if len(verify) == 1 else None
+    task = (Path(root)/files[targets[0]]).read_text(encoding='utf-8')
+    verify, instance = VERIFY.findall(task), meta.get('instance') or None
+    if instance not in instances(task):  # a template needs one of its instances; a single problem needs none
+        return 'error'
+    verdict = judge(verify[0], answers[0].strip(), instance) if len(verify) == 1 else None
     return {True: 'pass', False: 'fail'}.get(verdict, 'error')
 
 def check(text, root=archive.ROOT):
