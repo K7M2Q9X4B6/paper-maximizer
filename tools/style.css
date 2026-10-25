@@ -8,7 +8,7 @@ a:hover{background:var(--yellow);color:var(--bg);text-decoration:none}
 header,main,footer{max-width:64rem;margin:0 auto;padding:0 1rem}
 header nav{display:flex;flex-wrap:wrap;gap:.2rem 1.4rem;padding:1.1rem 0;border-bottom:1px solid var(--line)}
 header nav span{display:flex;flex-wrap:wrap;gap:0 1.4rem}header a{text-decoration:none;color:var(--blue)}
-header .brand{color:var(--purple)}header .brand::after{content:" $";color:var(--green)}
+header .brand{color:var(--purple)}
 h1,h2,h3{font-size:1em;font-weight:700;color:var(--blue);margin:1.6rem 0 .5rem}
 h1::before{content:"# "}h2::before{content:"## "}h3::before{content:"### "}
 .meta,.more,.stats,footer,.tile span,.plain span{color:var(--green)}
