@@ -14,7 +14,8 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  # Runs started by a skipped intake (label events) do nothing; they get their own group so they never cancel a real deploy.
+  group: pages${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && '-skip' || '' }}
   cancel-in-progress: true
 jobs:
   deploy:

@@ -123,6 +123,12 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(self.run_issue(attempt, n=3)[0], 0)
         self.assertEqual(archive.Archive(self.root).entries()[-1]['instance'], '12')
 
+    def test_one_issue_is_never_published_twice(self):
+        self.assertEqual(self.run_issue(FILE, n=7)[0], 0)
+        code, reply = self.run_issue(FILE, n=7)
+        self.assertEqual(code, 0); self.assertIn('already published', reply)
+        self.assertEqual(len(archive.Archive(self.root).entries()), 1)
+
     def test_event_command_prints_the_workflow_event(self):
         path = self.root/'gh-event.json'
         path.write_text('{"issue": {"number": 3}}', encoding='utf-8')

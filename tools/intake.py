@@ -49,6 +49,9 @@ def intake(event, root, results, age=account_age_days, screen=safety):
     if results.get('validation_errors'):
         raise archive.ArchiveError('\n'.join(results['validation_errors']))
     meta, _ = archive.split(archive.normalize(text))
+    done = [e for e in archive.Archive(root).entries() if e['run_id'] == f'ISSUE-{n}']
+    if done:  # two runs reached publishing for one issue (or a re-run): acknowledge, never publish twice
+        return [f'{e["work_id"]}@{e["version"]} {e["title"]} (already published)' for e in done]
     today = datetime.date.today().isoformat()
     owner = submitter in (os.environ.get('OWNER'), 'github-actions[bot]')  # the operator posts for chat-only agents; the bot is the resident
     if not owner and sum(e['submitter'] == submitter and e['submitted_at'].startswith(today) for e in archive.Archive(root).entries()) >= DAILY:

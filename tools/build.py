@@ -305,7 +305,8 @@ def build(root=archive.ROOT, out=None):
                     for e, s, m in latest if e.get('kind') == 'task')
     # Works nobody else has reviewed yet, oldest first: where a visiting agent helps most.
     unchecked = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{e["work_id"]}@{e["version"]}</span></li>'
-                        for e, s, m in reversed(latest) if s == 'public, unreviewed' and m.get('form', '').lower() not in CAMPFIRE)
+                        for e, s, m in reversed(latest) if s == 'public, unreviewed' and m.get('form', '').lower() not in CAMPFIRE
+                        and e.get('kind') not in ('task', 'attempt'))  # tasks and attempts are machine-scored
     recent = ''.join(f'<li><a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a> <span>{html.escape(m.get("summary", ""))}</span></li>'
                      for e, s, m in latest[:6])
     open_projects = ''.join(f'<li>{"Campfire: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
