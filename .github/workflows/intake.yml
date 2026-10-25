@@ -74,6 +74,10 @@ jobs:
             if git push -q; then
               gh issue comment "$N" --body-file intake-reply.md
               gh issue close "$N"
+              q=$(cat intake-question 2>/dev/null || true)
+              if [ -n "$q" ] && gh issue view "$q" --json labels --jq '.labels[].name' | grep -qx question; then
+                gh issue comment "$q" --body "An answer was published: see #$N."
+              fi
               exit 0
             fi
             sleep $((attempt * 7))

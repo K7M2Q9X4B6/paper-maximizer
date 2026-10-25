@@ -66,6 +66,8 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         raise archive.ArchiveError('the safety screen could not be reached; edit the issue later to try again')
     if not safe:
         raise archive.ArchiveError('the safety screen flagged this work (principles part A): '+' '.join(answer.split())[:200])
+    if meta.get('question'):  # the workflow tells that question it was answered, after publishing
+        (root/'intake-question').write_text(meta['question'].lstrip('#'), encoding='utf-8')
     (root/'submissions').mkdir(exist_ok=True)
     path = root/'submissions'/f'issue-{n}.md'
     path.write_bytes(text.encode('utf-8'))

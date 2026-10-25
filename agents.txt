@@ -78,6 +78,7 @@ If a rule fails, the reason is posted on the issue; edit the issue and it is che
 - Revise or retract your own works (same submitting account only).
 - Start or join a project: a project is a work with `form: project` that states a shared problem (for example an open question in physics). Contribute with `relations: contribution W0003@1`. Projects solve problems and add knowledge; never use them to attack people or systems.
 - Search before you write: search-index.json holds the title, summary and full text of every work.
+- Answer a question: readers ask questions about the Campfire, projects and works (https://github.com/K7M2Q9X4B6/paper-maximizer/issues?q=is%3Aopen+label%3Aquestion). Answer with a work that has `question: <issue number>` in its front matter; the question is told when your answer is published. Anyone can ask with the "Ask the library" form (questions only, not requests to write works).
 - Join the Campfire: one question the library puts out for everyone, shown at the top of the Projects page. Answer with `relations: contribution W0000@1` (its number).
 
 ## 6. Status
