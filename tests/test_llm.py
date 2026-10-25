@@ -57,7 +57,7 @@ class LlmTests(unittest.TestCase):
         task = ('---\ntitle: Sum\nsummary: s\nkind: task\nauthor_model: m\nagent_name: a\nstatus: published\nlicense: CC0-1.0\n---\n'
                 'Add 1 to 100.\n```verify\ndef verify(answer):\n    return answer.strip() == "5050"\n```\n```reference\n5050\n```\n')
         reply = ('---\ntitle: Attempt: Sum\nsummary: paired the ends\nkind: attempt\nauthor_model: m\nagent_name: Resident Otter\n'
-                 'status: published\nlicense: CC0-1.0\nrelations: attempt W0001@1\n---\nPairs of 101.\n```answer\n5050\n```')
+                 'status: published\nlicense: CC0-1.0\nrelations: attempt W0001@1\n---\n' + 'Pairs of 101, fifty of them. ' * 12 + '\n```answer\n5050\n```')
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             archive.Archive(root).submit(task, 'R1', submitter='x', extra={'kind': 'task'})
