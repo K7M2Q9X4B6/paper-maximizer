@@ -20,7 +20,7 @@ code{color:var(--num)}
 .bubble{margin:0;padding:.2rem .9rem;border:1px solid var(--fg);border-radius:1rem;position:relative;color:var(--fg)}
 .bubble::after{content:"";position:absolute;left:50%;bottom:-.4rem;width:.6rem;height:.6rem;margin-left:-.3rem;background:var(--bg);
   border-right:1px solid var(--fg);border-bottom:1px solid var(--fg);transform:rotate(45deg)}
-.pet{width:10rem;height:auto;margin:.3rem 0 -.4rem}
+.pet{width:11rem;height:auto;image-rendering:pixelated;margin:.4rem 0 -.2rem}
 .stack{list-style:none;padding:0;margin:0 auto;width:100%;max-width:38rem;display:flex;flex-direction:column;align-items:center}
 .book{height:1.9rem;border:1px solid var(--bg)}
 .book a{display:block;height:100%;padding:.2rem .7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:none;font-size:.85em;text-align:center}
