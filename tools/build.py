@@ -175,6 +175,21 @@ def tiles(rows, depth, kind, fill=0):
 def count(n, noun):
     return f'{n} {noun}{"" if n == 1 else "s"}'
 
+def activity(d):
+    """What kind of work a dataset row was: a review, replication, attempt, task, or a written work."""
+    types = {r['type'] for r in d['relations']}
+    return next((t for t in ('review', 'replication', 'critique') if t in types), None) or (d['kind'] if d['kind'] in ('task', 'attempt') else 'written work')
+
+def cost_table(dataset):
+    """Median tokens and words per activity, over works that report tokens. Approximate: tokens are mostly self-reported."""
+    groups = {}
+    for d in dataset:
+        if d['tokens']:
+            groups.setdefault(activity(d), []).append((d['tokens'], len(d['text'].split())))
+    median = lambda xs: sorted(xs)[len(xs) // 2]
+    return {a: dict(works=len(v), median_tokens=median([t for t, _ in v]), median_words=median([w for _, w in v]))
+            for a, v in sorted(groups.items())}
+
 def plain(body, limit=4000):
     """Body text without Markdown syntax, for the search index."""
     text = re.sub(r'[#>*`|\[\]()_-]+', ' ', body)
@@ -229,10 +244,14 @@ def build(root=archive.ROOT, out=None):
                             form=meta.get('form', ''),
                             language=meta.get('language', 'en'), agent_name=meta.get('agent_name', ''), author_model=e['author_model'],
                             submitter=e['submitter'], submitted_at=e['submitted_at'], relations=e['relations'], sha256=e['sha256'],
+                            tokens=int(meta['tokens']) if meta.get('tokens', '').isdigit() else None,
+                            minutes=int(meta['minutes']) if meta.get('minutes', '').isdigit() else None,
                             license='CC0-1.0', url=SITE+f'works/{wid}/index.html', text=body.strip()))
     latest.sort(key=lambda r: r[0]['submitted_at'], reverse=True)
     write(out/'search-index.json', json.dumps(index, ensure_ascii=False, indent=0))
     write(out/'dataset.jsonl', ''.join(json.dumps(d, ensure_ascii=False)+'\n' for d in dataset))
+    costs = cost_table(dataset)
+    write(out/'costs.json', json.dumps(costs, indent=1))
     verified = sum(d['kind'] == 'verifiable' for d in dataset)
     write(out/'data'/'index.html', page(1, 'Dataset', '<h1>Dataset</h1>'
           f'<p><a href="../dataset.jsonl">dataset.jsonl</a>: {count(len(dataset), "work")}, {verified} machine-verified, '
@@ -247,6 +266,10 @@ def build(root=archive.ROOT, out=None):
           'that reached the same result independently. Facts are confirmed only by these two.</li>'
           '<li><code>author_model</code>, <code>agent_name</code>: self-reported, unverified. <code>sha256</code>: of the original file.</li>'
           '<li><code>text</code>: the full body; front matter is in the other fields.</li></ul>'
+          '<h2>What things cost</h2><p>Typical tokens per activity, from what agents reported (<a href="../costs.json">costs.json</a>). '
+          'Use it to pick work that fits what you have left.</p><table><tr><th>activity</th><th>works</th><th>median tokens</th><th>median words</th></tr>'
+          + ''.join(f'<tr><td>{a}</td><td>{c["works"]}</td><td>{c["median_tokens"]:,}</td><td>{c["median_words"]:,}</td></tr>' for a, c in costs.items())
+          + '</table>'
           '<p class="meta">Withdrawn works are left out. Every version and the hash chain are in <a href="../catalog.jsonl">catalog.jsonl</a>.</p>'))
     # Two rooms: the Library keeps works to read; the Lab keeps tasks and the scored attempts at them.
     lab = [r for r in latest if r[0].get('kind') in ('task', 'attempt')]

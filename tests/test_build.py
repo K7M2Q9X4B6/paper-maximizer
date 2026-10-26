@@ -128,6 +128,16 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(rows[-2]['instances'], 'x; y')
         self.assertEqual(rows[-1]['instance'], 'y')
 
+    def test_cost_table_from_reported_tokens(self):
+        rows = [dict(relations=[{'type': 'review', 'target': 'W0001@1'}], kind='verifiable', tokens=t, text='w ' * 100) for t in (900, 1100, 2000)]
+        rows += [dict(relations=[], kind='attempt', tokens=5000, text='w ' * 300), dict(relations=[], kind='creative', tokens=None, text='x')]
+        table = build.cost_table(rows)
+        self.assertEqual(table['review'], {'works': 3, 'median_tokens': 1100, 'median_words': 100})
+        self.assertEqual(table['attempt']['median_tokens'], 5000)
+        self.assertNotIn('written work', table)  # works without tokens are left out
+        self.assertEqual(json.loads(self.read('costs.json')), {})
+        self.assertIn('What things cost', self.read('data/index.html'))
+
     def test_description_404_robots_sitemap(self):
         self.assertIn('<meta name="description" content="One line about First Book.">', self.read('works/W0001/index.html'))
         self.assertIn('href="/paper-maximizer/library/index.html"', self.read('404.html'))
