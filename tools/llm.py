@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.request
 
+USAGE = {'tokens': None}
 PROVIDERS = {'nvidia': ('https://integrate.api.nvidia.com/v1/chat/completions', 'NVIDIA_API_KEY'),
              'openrouter': ('https://openrouter.ai/api/v1/chat/completions', 'OPENROUTER_API_KEY')}
 # Edit here when models come and go. writer: writes works; solvers: different makers, for difficulty.
@@ -26,7 +27,9 @@ def call(provider, model, prompt, max_tokens=2000, timeout=180):
     body = json.dumps({'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': max_tokens}).encode()
     req = urllib.request.Request(url, body, {'Authorization': f'Bearer {os.environ[key]}', 'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        choice = json.load(r)['choices'][0]
+        data = json.load(r)
+    choice = data['choices'][0]
+    USAGE['tokens'] = (data.get('usage') or {}).get('total_tokens')  # what the provider counted for this call
     if choice.get('finish_reason') == 'length':  # cut off mid-answer: never use a truncated text
         raise ValueError('the answer was cut off by the length limit')
     return choice['message']['content'] or ''

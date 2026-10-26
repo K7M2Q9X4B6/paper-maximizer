@@ -82,7 +82,6 @@ status: published
 license: CC0-1.0
 form: attempt
 relations: attempt {target}{instance}
-resources: <rough tokens and minutes you used, self-reported>
 ---
 # Attempt: <the task title>
 {focus}
@@ -164,6 +163,8 @@ def draft(provider, model, root, target=None, attempt_of=None):
         if reply.startswith('```'):  # the whole reply wrapped in one fence; inner blocks (checks, answers) stay
             reply = re.sub(r'^```\w*\n|\n```$', '', reply)
         text = reply + '\n'
+        if llm.USAGE['tokens'] and text.startswith('---\n'):  # real token counts calibrate the cost table
+            text = f'---\ntokens: {llm.USAGE["tokens"]}\n' + text[4:]
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)/'submissions'/'resident.md'
             path.parent.mkdir()

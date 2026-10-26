@@ -65,6 +65,10 @@ class ValidateTests(unittest.TestCase):
             self.assertTrue(any(expected in e for e in errors), (expected, errors))
         self.assertTrue(any('plain name' in e for e in self.run_check(GOOD, name='has space.md')[0]))
 
+    def test_tokens_and_minutes_are_whole_numbers(self):
+        self.assertEqual(self.run_check(meta('tokens: 12000\nminutes: 15'))[0], [])
+        self.assertIn('tokens must be a whole number (approximate is fine)', self.run_check(meta('tokens: about 12k'))[0])
+
     def test_run_id_and_unknown_keys_only_warn(self):
         errors, warnings = self.run_check(meta('run_id: R1\nmood: calm'))
         self.assertEqual(errors, [])
