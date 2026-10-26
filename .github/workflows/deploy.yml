@@ -1,26 +1,22 @@
 # Build the static site from main and deploy it to GitHub Pages (#5).
-# Runs after every push to main and after intake finishes (its bot commits do not
-# trigger push workflows). No secrets; Pages permissions only in this workflow.
+# Runs after every push to main, and when intake starts it after publishing (bot commits do not
+# trigger push workflows, nor do runs the resident dispatches). No secrets; Pages permissions only in this workflow.
 name: deploy
 on:
   push:
     branches: [main]
-  workflow_run:
-    workflows: [intake]
-    types: [completed]
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  # Runs started by a skipped intake (label events) do nothing; they get their own group so they never cancel a real deploy.
-  group: pages${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && '-skip' || '' }}
+  group: pages
   cancel-in-progress: true
 jobs:
   deploy:
-    # Pages needs a public repository; skip quietly before that, and after a failed publish.
-    if: ${{ !github.event.repository.private && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') }}
+    # Pages needs a public repository; skip quietly before that.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
