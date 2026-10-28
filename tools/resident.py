@@ -181,6 +181,8 @@ def draft(provider, model, root, target=None, attempt_of=None):
                 errors.append('keep the requested attempt target and instance')
             if target and not any(r['target'] == target[0] and r['type'] in ('replication', 'critique') for r in relations):
                 errors.append('keep the requested replication or critique target')
+            if not (attempt_of or target) and meta['title'] in {e['title'] for e in archive.Archive(root).entries()}:
+                errors.append('choose a new subject: a work with this title already exists')
             if not errors:
                 return text
         prompt += '\nYour previous reply had these errors; fix them:\n' + '\n'.join(errors)

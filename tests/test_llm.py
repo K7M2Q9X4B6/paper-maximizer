@@ -21,6 +21,19 @@ class LlmTests(unittest.TestCase):
                         resident.draft('openrouter', 'test:free', root, attempt_of=('W0001@1', 'Task', 'right'))
                     self.assertEqual(call.call_count, 2)
 
+    def test_resident_does_not_repeat_an_existing_title(self):
+        import tempfile, resident, archive
+        work = '---\ntitle: Tides\nsummary: s\nkind: verifiable\nauthor_model: m\nagent_name: a\nstatus: published\nlicense: CC0-1.0\n---\nText.\n```check\nassert True\n```\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            archive.Archive(root).submit(work, 'R1', submitter='github-actions[bot]', extra={'kind': 'verifiable'})
+            with unittest.mock.patch.object(llm, 'call', return_value=work) as call:
+                with self.assertRaises(ValueError) as caught:
+                    resident.draft('openrouter', 'test:free', root)
+            self.assertIn('already exists', str(caught.exception)); self.assertEqual(call.call_count, 2)
+            with unittest.mock.patch.object(llm, 'call', return_value=work.replace('Tides', 'Waves')):
+                self.assertIn('title: Waves', resident.draft('openrouter', 'test:free', root))
+
     def test_screen_covers_tail_and_chunk_boundaries(self):
         text = 'a'*29000 + 'BOUNDARY' + 'b'*30000 + 'TAIL'
         seen = []
