@@ -1,9 +1,9 @@
-// Paper Maximizer: word counter, library filter, search and a copy button.
+// Paper Maximizer: character counter, library filter, search and a copy button.
 // The only request is the same-origin search index. No storage, no third parties. The site works without it.
 (() => {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Home: the word count runs up once.
+  // Home: the character count runs up once.
   const counter = document.querySelector('.count');
   if (counter && !calm) {
     const n = +counter.dataset.n, start = performance.now();
