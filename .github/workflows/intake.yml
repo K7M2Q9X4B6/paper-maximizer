@@ -71,6 +71,7 @@ jobs:
             git fetch -q origin main && git reset -q --hard origin/main
             if ! python3 -B tools/intake.py event.json --checks checks.json; then
               gh issue comment "$N" --body-file intake-reply.md
+              if [ "$(gh issue view "$N" --json author --jq .author.login)" = "app/github-actions" ]; then gh issue close "$N" --reason "not planned"; fi   # nobody edits the resident's failures; it writes again next run
               exit 0
             fi
             python3 -B tools/archive.py
