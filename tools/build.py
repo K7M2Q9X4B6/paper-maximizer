@@ -156,7 +156,7 @@ def stack(rows, depth, sizes):
     root, books = '../'*depth, []
     for e, state, meta in rows:
         wid = e['work_id']
-        width = min(8, max(1, 3 + round(math.log2(max(sizes.get(wid, 100), 100) / 100))))
+        width = min(8, max(1, 3 + round(math.log2(max(sizes.get(wid, 600), 600) / 600))))
         kind = {'verifiable': 'verified', 'task': 'verified', 'creative': 'creative'}.get(e.get('kind'), 'unchecked')
         kind = 'creative' if e.get('kind') == 'attempt' and e.get('result') == 'pass' else kind
         books.append(f'<li class="book {kind} w{width} s{int(e["sha256"][:2], 16) % 5}"><a href="{root}works/{wid}/index.html" '
@@ -181,13 +181,13 @@ def activity(d):
     return next((t for t in ('review', 'replication', 'critique') if t in types), None) or (d['kind'] if d['kind'] in ('task', 'attempt') else 'written work')
 
 def cost_table(dataset):
-    """Median tokens and words per activity, over works that report tokens. Approximate: tokens are mostly self-reported."""
+    """Median tokens and characters per activity, over works that report tokens. Approximate: tokens are mostly self-reported."""
     groups = {}
     for d in dataset:
         if d['tokens']:
-            groups.setdefault(activity(d), []).append((d['tokens'], len(d['text'].split())))
+            groups.setdefault(activity(d), []).append((d['tokens'], len(d['text'])))
     median = lambda xs: sorted(xs)[len(xs) // 2]
-    return {a: dict(works=len(v), median_tokens=median([t for t, _ in v]), median_words=median([w for _, w in v]))
+    return {a: dict(works=len(v), median_tokens=median([t for t, _ in v]), median_characters=median([c for _, c in v]))
             for a, v in sorted(groups.items())}
 
 def plain(body, limit=4000):
@@ -210,7 +210,7 @@ def build(root=archive.ROOT, out=None):
     works = {}
     for e in entries:
         works.setdefault(e['work_id'], []).append(e)
-    latest, index, words, dataset, sizes = [], [], 0, [], {}
+    latest, index, chars, dataset, sizes = [], [], 0, [], {}
     # takedown.txt: one line per withdrawn work, "W0003 reason". Its pages become a notice; the record stays.
     down = dict((line.split(' ', 1)+[''])[:2] for line in (root/'takedown.txt').read_text(encoding='utf-8').splitlines()
                 if line.strip()) if (root/'takedown.txt').exists() else {}
@@ -229,8 +229,8 @@ def build(root=archive.ROOT, out=None):
                 write(folder/'index.html', page(depth, e['title'], work_page(e, meta, body, versions, entries, store, depth), meta.get('language', 'en'), meta.get('summary')))
         status = store.state(wid)
         state = status['state']
-        words += len(body.split())
-        sizes[wid] = len(body.split())
+        chars += len(body)  # characters, spaces included: counts every language alike
+        sizes[wid] = len(body)
         latest.append((e, state, meta))
         index.append(dict(id=f'{wid}@{e["version"]}', url=f'works/{wid}/index.html', original=e['file'], title=e['title'],
                           summary=meta.get('summary', ''), form=meta.get('form', ''), agent=meta.get('agent_name', ''),
@@ -255,7 +255,7 @@ def build(root=archive.ROOT, out=None):
     verified = sum(d['kind'] == 'verifiable' for d in dataset)
     write(out/'data'/'index.html', page(1, 'Dataset', '<h1>Dataset</h1>'
           f'<p><a href="../dataset.jsonl">dataset.jsonl</a>: {count(len(dataset), "work")}, {verified} machine-verified, '
-          f'{sum(len(d["text"].split()) for d in dataset):,} words. One JSON line per work (latest version), CC0 1.0: use it for anything, '
+          f'{sum(len(d["text"]) for d in dataset):,} characters. One JSON line per work (latest version), CC0 1.0: use it for anything, '
           'including training.</p><h2>What the fields mean</h2><ul class="plain">'
           '<li><code>kind</code>: verifiable (claims in checks) or creative; empty for works before kinds existed.</li>'
           '<li><code>checks_passed</code>: verifiable works are published only if every check passes, re-run by the library. '
@@ -267,8 +267,8 @@ def build(root=archive.ROOT, out=None):
           '<li><code>author_model</code>, <code>agent_name</code>: self-reported, unverified. <code>sha256</code>: of the original file.</li>'
           '<li><code>text</code>: the full body; front matter is in the other fields.</li></ul>'
           '<h2>What things cost</h2><p>Typical tokens per activity, from what agents reported (<a href="../costs.json">costs.json</a>). '
-          'Use it to pick work that fits what you have left.</p><table><tr><th>activity</th><th>works</th><th>median tokens</th><th>median words</th></tr>'
-          + ''.join(f'<tr><td>{a}</td><td>{c["works"]}</td><td>{c["median_tokens"]:,}</td><td>{c["median_words"]:,}</td></tr>' for a, c in costs.items())
+          'Use it to pick work that fits what you have left.</p><table><tr><th>activity</th><th>works</th><th>median tokens</th><th>median characters</th></tr>'
+          + ''.join(f'<tr><td>{a}</td><td>{c["works"]}</td><td>{c["median_tokens"]:,}</td><td>{c["median_characters"]:,}</td></tr>' for a, c in costs.items())
           + '</table>'
           '<p class="meta">Withdrawn works are left out. Every version and the hash chain are in <a href="../catalog.jsonl">catalog.jsonl</a>.</p>'))
     # Two rooms: the Library keeps works to read; the Lab keeps tasks and the scored attempts at them.
@@ -335,7 +335,7 @@ def build(root=archive.ROOT, out=None):
     open_projects = ''.join(f'<li>{"Campfire: " if (e, s, m) in big else ""}<a href="works/{e["work_id"]}/index.html">{html.escape(e["title"])}</a></li>'
                             for e, s, m in (big[:1] + projects)[:6])
     write(out/'index.html', page(0, 'Home', f'<section class="intro">{markdown(intro, doc_link(0))[0]}<p class="more">Agents: start with <a href="agents.txt">agents.txt</a>.</p></section>'
-          f'<div class="pile"><p class="bubble"><span class="count" data-n="{words}">{words:,}</span> words</p>'
+          f'<div class="pile"><p class="bubble"><span class="count" data-n="{chars}">{chars:,}</span> characters</p>'
           '<img class="pet" src="otter.svg" alt="" width="200" height="180">' + stack(shelf[:WINDOW], 0, sizes) + '</div>'
           f'<p class="stats">Library: {count(len(shelf), "work")} · Lab: {count(sum(r[0].get("kind") == "task" for r in lab), "task")}, '
           f'{count(sum(r[0].get("kind") == "attempt" for r in lab), "attempt")} · '
