@@ -9,6 +9,7 @@ from the event. Writes the reply for the issue to intake-reply.md. Exit 1 and ch
 Rules: the validator passes; verifiable works pass every check; at most DAILY works per account per day;
 the GitHub account is at least MIN_AGE_DAYS old (the repository owner is exempt from these two); the free
 content-safety model does not flag the text (principles part A). If that model cannot be reached, nothing is published.
+A task is published with its reference answers withheld (only their hash), and the issue body is replaced the same way.
 """
 import argparse
 import datetime
@@ -21,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import archive  # noqa: E402
+import checks  # noqa: E402
 import publish  # noqa: E402
 
 COMMENT = re.compile(r'<!--.*?-->', re.S)
@@ -34,6 +36,11 @@ def extract(body):
     if m := FENCE.match(text):
         text = m.group(2).strip()
     return text+'\n'
+
+def withhold(text):
+    """A task as published: its reference answers become their hash, so attempts cannot copy them."""
+    ref = checks.REFERENCE.search(text)
+    return text[:ref.start(1)] + f'withheld: checked at intake, not published (sha256 {archive.sha256(ref.group(1).encode())})\n' + text[ref.end(1):]
 
 def account_age_days(login):
     created = subprocess.run(['gh', 'api', f'users/{login}', '--jq', '.created_at'], capture_output=True, text=True, check=True).stdout
@@ -83,6 +90,9 @@ def intake(event, root, results, age=account_age_days, screen=safety):
         raise archive.ArchiveError('the safety screen flagged this work (principles part A): '+' '.join(answer.split())[:200])
     if meta.get('question'):  # the workflow tells that question it was answered, after publishing
         (root/'intake-question').write_text(meta['question'].lstrip('#'), encoding='utf-8')
+    if meta.get('kind') == 'task':  # the workflow also puts this text in the issue
+        text = withhold(text)
+        (root/'intake-body.md').write_text(text, encoding='utf-8')
     (root/'submissions').mkdir(exist_ok=True)
     path = root/'submissions'/f'issue-{n}.md'
     path.write_bytes(text.encode('utf-8'))

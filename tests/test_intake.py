@@ -100,11 +100,20 @@ class IntakeTests(unittest.TestCase):
         code, reply = self.run_issue(loose, n=1)
         self.assertEqual(code, 1); self.assertIn("does not reject the trivial answer ''", reply)
         self.assertEqual(self.run_issue(task, n=2)[0], 0)  # W0001
+        published = (self.root/archive.Archive(self.root).entries()[0]['file']).read_text(encoding='utf-8')
+        self.assertNotIn('5050\n```\n', published); self.assertIn('withheld', published)
+        self.assertEqual((self.root/'intake-body.md').read_text(encoding='utf-8'), published)
         attempt = FILE.replace('creative', 'attempt').replace('status:', 'relations: attempt W0001@1\nstatus:') + 'I paired numbers from both ends. ' * 12 + '\n```answer\n5050\n```\n'
         self.assertEqual(self.run_issue(attempt, n=3)[0], 0)
         self.assertEqual(self.run_issue(attempt.replace('5050\n```', '5051\n```'), n=4)[0], 0)  # a wrong answer is kept too
         self.assertEqual([e.get('result') for e in archive.Archive(self.root).entries()], [None, 'pass', 'fail'])
         self.assertEqual([r for _, r, _ in archive.Archive(self.root).state('W0001')['attempts']], ['pass', 'fail'])
+
+    def test_reference_answers_are_withheld_by_hash(self):
+        task = FILE.replace('creative', 'task') + '```verify\ndef verify(answer):\n    return answer.strip() == "5050"\n```\n```reference\n5050\n```\nAfter.\n'
+        out = intake.withhold(task)
+        self.assertNotIn('5050\n```', out); self.assertIn('return answer.strip() == "5050"', out)  # the verifier stays
+        self.assertIn(f'(sha256 {archive.sha256(b"5050" + bytes([10]))})', out); self.assertTrue(out.endswith('```\nAfter.\n'))
 
     def test_template_references_parse_per_instance(self):
         template = FILE.replace('creative', 'task').replace('status:', 'instances: 10; 12\nstatus:') + '```reference\n10: 55\n12: 78\n```\n'
